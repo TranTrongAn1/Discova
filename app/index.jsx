@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',   // ⛔ Optional - remove if causing issues
   },
   logo: {
-alignSelf: 'center'
+  alignSelf: 'center'
   },
   Text: {
     fontSize: 15,
