@@ -76,9 +76,9 @@ const Calendar = () => {
             const isToday = day.getDate() === currentDate.getDate() && 
               day.getMonth() === currentDate.getMonth() && 
               day.getFullYear() === currentDate.getFullYear();
-              
             return (
-              <TouchableOpacity 
+        //Replace TouchableOpacity with View to avoid touchable effect
+              <View
                 key={`num-${index}`} 
                 style={[
                   styles.dayCol, 
@@ -92,7 +92,7 @@ const Calendar = () => {
                 ]}>
                   {day.getDate()}
                 </Text>
-              </TouchableOpacity>
+              </View>
             );
           })}
         </View>
