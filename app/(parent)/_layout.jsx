@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
-
 export default function ParentLayout() {
   return (
     <Tabs
@@ -21,7 +20,7 @@ export default function ParentLayout() {
             case 'communication':
               iconName = focused ? 'people' : 'people-outline';
               break;
-            case 'profile':
+            case '(profile)':
               iconName = focused ? 'person' : 'person-outline';
               break;
           }
@@ -60,7 +59,7 @@ export default function ParentLayout() {
       <Tabs.Screen name="chat" options={{ title: 'chat',   }}/>
       <Tabs.Screen name="calendar" options={{ title: 'đặt lịch',   }}/>
       <Tabs.Screen name="communication" options={{ title: 'cộng đồng',   }}/>
-      <Tabs.Screen name="profile" options={{ title: 'hồ sơ',   }}/>
+      <Tabs.Screen name="(profile)" options={{ title: 'hồ sơ', unmountOnBlur: true }}/>
     </Tabs>
   );
 }

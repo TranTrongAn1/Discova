@@ -1,14 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 
-const info = () => {
+const childRecord = () => {
   return (
     <View>
-      <Text>info</Text>
+      <Text>childRecord</Text>
     </View>
   )
 }
 
-export default info
+export default childRecord
 
 const styles = StyleSheet.create({})

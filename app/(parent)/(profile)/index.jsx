@@ -5,8 +5,8 @@ import { router } from 'expo-router';
 
 const profileImage = null; // Replace this with your image URL or null
 const settingsOptions = [
-  { label: 'Gói đăng ký', route: '(profile)/subscription' },
-  { label: 'Thông tin cơ bản', route: '(profile)/info' },
+  { label: 'Gói đăng ký', route: 'subscription' },
+  { label: 'Thông tin cơ bản', route: 'info' },
   { label: 'Hồ sơ của bé', route: 'ChildProfile' },
   { label: 'Thông tin đặt lịch', route: 'BookingInfo' },
   { label: 'Cài đặt tài khoản', route: 'AccountSettings' },
@@ -26,7 +26,7 @@ const Profile = () => {
         source={
           profileImage
             ? { uri: profileImage }
-            : require('../../assets/images/default-profile.png')
+            : require('../../../assets/images/default-profile.png')
         }
       />
       <Text style={styles.username}>Tên người dùng</Text>
