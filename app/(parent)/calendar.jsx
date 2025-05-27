@@ -212,7 +212,7 @@ const Calendar = () => {
                 <TouchableOpacity style={styles.detailButton}>
                   <Text style={styles.detailButtonText}>CHI TIẾT</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelButton}> {/* Changed style for "Đặt lại lịch" */}
+                <TouchableOpacity style={styles.cancelButton}>
                   <Text style={styles.cancelButtonText}>ĐẶT LẠI LỊCH</Text>
                 </TouchableOpacity>
               </View>
@@ -336,7 +336,7 @@ buttonRow: {
 },
 detailButton: {
   paddingVertical: 8,
-  paddingHorizontal: 60,
+  paddingHorizontal: 50,
   borderWidth: 1,
   borderColor: '#7B68EE',
   borderRadius: 20,
@@ -347,7 +347,7 @@ detailButtonText: {
 },
 cancelButton: {
   paddingVertical: 8,
-  paddingHorizontal: 60,
+  paddingHorizontal: 50,
   backgroundColor: '#7B68EE',
   borderRadius: 20,
 },

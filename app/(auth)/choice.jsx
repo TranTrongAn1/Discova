@@ -10,7 +10,7 @@ const Choice = () => {
   const handleRolePress = (role) => {
     setSelectedRole((prev) => (prev === role ? null : role)); // Toggle selection
   };
-
+  
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Bạn là</Text>
@@ -46,7 +46,7 @@ const Choice = () => {
                 if (selectedRole === 'parent') {
                 router.push('/(parent)/home');
                 } else if (selectedRole === 'psychologist') {
-                router.push('/Welcomepsychologist');
+                router.push('/(Pychologist)/calendar');
                 }
             }}
           disabled={!selectedRole} // Disable if no role selected

@@ -7,8 +7,8 @@ const profileImage = null; // Replace this with your image URL or null
 const settingsOptions = [
   { label: 'Gói đăng ký', route: 'subscription' },
   { label: 'Thông tin cơ bản', route: 'info' },
-  { label: 'Hồ sơ của bé', route: 'ChildProfile' },
-  { label: 'Thông tin đặt lịch', route: 'BookingInfo' },
+  { label: 'Hồ sơ của bé', route: 'childRecord' },
+  { label: 'Thông tin đặt lịch', route: 'bookingInfo' },
   { label: 'Cài đặt tài khoản', route: 'AccountSettings' },
   { label: 'Cộng đồng và bài đăng', route: 'CommunityPosts' },
   { label: 'Giao diện', route: 'Appearance' },
