@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Slot, useRouter, usePathname } from 'expo-router';
-
+import psychologists from '../(Pychologist)/pyschcologists';
 const Layout = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -13,21 +13,38 @@ const Layout = () => {
     { name: 'client',label: 'Client', icon: 'people-outline' },
     { name: 'workInfo',label: 'Profile', icon: 'person-outline' },
   ];
+const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <View style={styles.container}>
       {/* Top Row */}
       <View style={styles.topRow}>
-        <Ionicons name="menu" size={24} color="#333" />
+        <TouchableOpacity onPress={() => setMenuOpen((prev) => !prev)}>
+          <Ionicons name="menu" size={24} color="#333" />
+        </TouchableOpacity>
         <View style={styles.rightIcons}>
           <Ionicons name="search" size={22} color="#333" style={styles.icon} />
           <Ionicons name="notifications-outline" size={22} color="#333" style={styles.icon} />
-          <Image
-            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
-            style={styles.avatar}
-          />
+            <TouchableOpacity onPress={() => router.push('/profile')}>
+              <Image
+                source={{ uri: psychologists[0].img }}
+                resizeMode="cover"
+                style={styles.avatar}
+              />
+            </TouchableOpacity>
         </View>
       </View>
+
+      {menuOpen && (
+        <View style={styles.dropdown}>
+          <TouchableOpacity onPress={() => {
+            setMenuOpen(false);
+            router.push('/review'); // Replace with your actual review route
+          }}>
+            <Text style={styles.dropdownItem}>Review</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Top Navigation */}
       <View style={styles.navRow}>
@@ -109,4 +126,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderColor: '#000',
   },
+  dropdown: {
+  position: 'absolute',
+  top: 90,
+  left: 16,
+  backgroundColor: '#fff',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 6,
+  zIndex: 10,
+  padding: 8,
+  elevation: 4, // Android shadow
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+},
+dropdownItem: {
+  paddingVertical: 8,
+  paddingHorizontal: 16,
+  fontSize: 14,
+  color: '#333',
+},
+
 });

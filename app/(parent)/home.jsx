@@ -2,6 +2,7 @@ import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import React from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
+import { router } from 'expo-router';
 const problemsData = [
   'Rối loạn lo âu',
   'Hướng nghiệp cho con',
@@ -156,9 +157,9 @@ const Home = () => {
 
           </ScrollView>
         </View>
-
-
-
+        <TouchableOpacity onPress={() => router.push('/(booking)/psychologistsList')}>
+        <Text style={styles.more}>Xem thêm chuyên gia khác </Text>
+        </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -348,6 +349,13 @@ bookButtonText: {
   fontSize: 12,
   textAlign: 'center', 
   fontWeight: 'bold',    
-}
+},
+more: {
+  color: '#7B68EE',
+  fontSize: 14,
+  fontWeight: 'bold',
+  textAlign: 'center',
+  marginBottom: 20,
+},
 
 });
