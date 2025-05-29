@@ -44,9 +44,9 @@ const Choice = () => {
           activeOpacity={selectedRole ? 0.8 : 1}
           onPress={() => {
                 if (selectedRole === 'parent') {
-                router.push('/(parent)/home');
+                router.replace('/(parent)/home');
                 } else if (selectedRole === 'psychologist') {
-                router.push('/(Pychologist)/calendar');
+                router.push('/payment');
                 }
             }}
           disabled={!selectedRole} // Disable if no role selected
