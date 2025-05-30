@@ -14,15 +14,20 @@ import {
 import React, { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
+import axios from 'axios';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const Register = () => {
-  const [username, setUsername] = useState('');
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
   const [agreePolicy, setAgreePolicy] = useState(false);
-  const [showPwd, setShowPwd]     = useState(false);   
+  const [showPwd, setShowPwd]  = useState(false); 
+  const [showPwd1, setShowPwd1]  = useState(false); 
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [userType, setUserType] = useState('Parent'); // Default value
+  const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
@@ -35,6 +40,7 @@ const Register = () => {
       keyboardShouldPersistTaps="handled"
     >
     <View style={styles.container}>
+      <Toast />
      <TouchableOpacity style={styles.backButton} onPress={router.back}>
         <Ionicons name="arrow-back" size={24} color="black" />
      </TouchableOpacity>
@@ -48,14 +54,6 @@ const Register = () => {
 
       <Text style={styles.Text}>HOẶC ĐĂNG KÝ BẰNG EMAIL</Text>
 
-      {/* Tên người dùng */}
-      <TextInput
-        style={styles.input}
-        placeholder="Tên người dùng"
-        placeholderTextColor="#A1A4B2"
-        value={username}
-        onChangeText={setUsername}
-      />
 
       {/* Địa chỉ email */}
       <TextInput
@@ -85,6 +83,22 @@ const Register = () => {
         </TouchableOpacity>
         </View>
 
+        <View style={styles.pwdWrapper}>
+          <TextInput
+            style={styles.input2}
+            placeholder="Xác nhận mật khẩu"
+            placeholderTextColor="#A1A4B2"
+            secureTextEntry={!showPwd1}
+            value={passwordConfirm}
+            onChangeText={setPasswordConfirm}
+          />
+        <TouchableOpacity
+            onPress={() => setShowPwd1(!showPwd1)}
+            style={styles.eyeBtn}
+        >
+            <Ionicons name={showPwd1 ? 'eye-off' : 'eye'} size={22} color="#A1A4B2" />
+        </TouchableOpacity>
+        </View>
 
       <View style={styles.policyContainer}>
         <Text style={styles.Text3}>
@@ -99,7 +113,79 @@ const Register = () => {
         </View>
 
             {/* Đăng ký */}
-      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => {}}>
+      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={async () => {
+            // Basic validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!email || !password || !passwordConfirm) {
+              Toast.show({
+                type: 'error',
+                text1: 'Vui lòng điền đầy đủ thông tin',
+              });
+              return;
+            }
+
+            if (!emailRegex.test(email)) {
+              Toast.show({
+                type: 'error',
+                text1: 'Email không hợp lệ',
+              });
+              return;
+            }
+
+            if (password.length < 6) {
+              Toast.show({
+                type: 'error',
+                text1: 'Mật khẩu phải có ít nhất 6 ký tự',
+              });
+              return;
+            }
+
+            if (password !== passwordConfirm) {
+              Toast.show({
+                type: 'error',
+                text1: 'Mật khẩu không khớp',
+              });
+              return;
+            }
+
+            if (!agreePolicy) {
+              Toast.show({
+                type: 'error',
+                text1: 'Bạn cần đồng ý với chính sách quyền riêng tư',
+              });
+              return;
+            }
+
+            const payload = {
+              email,
+              password,
+              password_confirm: passwordConfirm,
+              user_type: userType,
+              user_timezone: userTimezone,
+            };
+
+            try {
+              const { data } = await axios.post('http://127.0.0.1:8000/api/auth/register', payload);
+
+              Toast.show({
+                type: 'success',
+                text1: 'Đăng ký thành công!',
+              });
+              router.replace('/verify-email');
+            } catch (error) {
+              const message =
+                error.response?.data?.message ||
+                error.message ||
+                'Đăng ký thất bại!';
+
+              Toast.show({
+                type: 'error',
+                text1: message,
+              });
+            }
+          }}
+          >
         <Text style={styles.buttonText}>BẮT ĐẦU</Text>
       </TouchableOpacity>
     </View>

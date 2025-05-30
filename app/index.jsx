@@ -14,7 +14,7 @@ export default function HomeScreen() {
       <Text style={styles.Text2}> Đồng hành cùng con, vững bước tương lai {"\n"}
         Bắt đầu hành trình của bạn ngay hôm nay! 
       </Text>
-      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => {}}>
+      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => router.push('/(auth)/register')}>
         <Text style={styles.buttonText}>THAM GIA NGAY</Text>
       </TouchableOpacity>
 

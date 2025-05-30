@@ -2,13 +2,54 @@ import { StyleSheet, Text, View, TouchableOpacity, TextInput, Dimensions, Toucha
 import React, { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+  import Toast from 'react-native-toast-message';
  const { width: SCREEN_WIDTH } = Dimensions.get('window'); 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+
+
+const handleLogin = async () => {
+  if (!email || !password) {
+    Toast.show({
+      type: 'error',
+      text1: 'Missing Fields',
+      text2: 'Please enter both email and password',
+    });
+    return;
+  }
+
+  try {
+    const response = await axios.post('http://127.0.0.1:8000/api/auth/login/', {
+      email,
+      password,
+    });
+
+    console.log('Login successful:', response.data);
+    Toast.show({
+      type: 'success',
+      text1: 'Login Successful',
+      text2: 'Redirecting you...',
+    });
+
+    router.push('/welcome');
+
+  } catch (error) {
+    console.log('Login error:', error.response?.data || error.message);
+    Toast.show({
+      type: 'error',
+      text1: 'Login Failed',
+      text2: error.response?.data?.message || 'Invalid credentials',
+    });
+  }
+};
+
+
   return (
   <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    
   {/* lifts content when keyboard shows */}
   <KeyboardAvoidingView
     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -20,6 +61,7 @@ const Login = () => {
       keyboardShouldPersistTaps="handled"
     >
     <View style={styles.container}>
+      <Toast position="top" visibilityTime={4000} topOffset={50}  />
       <TouchableOpacity style={styles.backButton} onPress={router.back}>
           <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
@@ -51,7 +93,7 @@ const Login = () => {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => {}}>
+      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => {handleLogin()}}>
         <Text style={styles.buttonText}>ĐĂNG NHẬP</Text>
       </TouchableOpacity>
 
