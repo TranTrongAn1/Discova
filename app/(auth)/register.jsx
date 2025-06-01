@@ -166,13 +166,13 @@ const Register = () => {
             };
 
             try {
-              const { data } = await axios.post('http://127.0.0.1:8000/api/auth/register', payload);
+              const { data } = await axios.post('http://localhost:8000/api/auth/register/', payload);
 
               Toast.show({
                 type: 'success',
                 text1: 'Đăng ký thành công!',
               });
-              router.replace('/verify-email');
+              router.replace('/login');
             } catch (error) {
               const message =
                 error.response?.data?.message ||
