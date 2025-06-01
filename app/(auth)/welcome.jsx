@@ -5,23 +5,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const welcome = () => {
 
-  useEffect(() => {
   const checkUserTypeAndRedirect = async () => {
     try {
       const userType = await AsyncStorage.getItem('user_type');
 
-      if (userType == 'Parent') {
+      if (userType === 'Parent') {
         router.replace('/(parent)/home');
-      } else if (userType == 'Psychologist') {
+      } else if (userType === 'Psychologist') {
         router.replace('/payment');
+      } else {
+        console.warn('Unknown user type:', userType);
       }
     } catch (error) {
       console.error('Error reading user_type:', error);
     }
   };
-
-  checkUserTypeAndRedirect();
-}, []);
 
   return (
     <View style={styles.container}>
