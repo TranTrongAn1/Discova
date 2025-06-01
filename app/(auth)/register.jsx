@@ -99,6 +99,25 @@ const Register = () => {
             <Ionicons name={showPwd1 ? 'eye-off' : 'eye'} size={22} color="#A1A4B2" />
         </TouchableOpacity>
         </View>
+        <Text style={styles.Text12}>Bạn là</Text>
+            <View style={styles.userTypeContainer}>
+              <TouchableOpacity
+                style={[styles.userTypeButton, userType === 'Parent' && styles.userTypeButtonActive]}
+                onPress={() => setUserType('Parent')}
+              >
+                <Text style={[styles.userTypeText, userType === 'Parent' && styles.userTypeTextActive]}>
+                  Phụ huynh
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.userTypeButton, userType === 'Psychologist' && styles.userTypeButtonActive]}
+                onPress={() => setUserType('Psychologist')}
+              >
+                <Text style={[styles.userTypeText, userType === 'Psychologist' && styles.userTypeTextActive]}>
+                  Chuyên gia
+                </Text>
+              </TouchableOpacity>
+            </View>
 
       <View style={styles.policyContainer}>
         <Text style={styles.Text3}>
@@ -319,5 +338,41 @@ eyeBtn: {
   justifyContent: 'center',
   alignItems: 'center',
 },
+userTypeContainer: {
+  flexDirection: 'row',
+  justifyContent: 'left',
+  marginBottom: 20,
+  marginLeft: 40,
+  gap: 10,
+},
+
+userTypeButton: {
+  borderWidth: 1,
+  borderColor: '#A1A4B2',
+  borderRadius: 10,
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  backgroundColor: '#F2F3F7',
+},
+
+userTypeButtonActive: {
+  backgroundColor: '#8E97FD',
+  borderColor: '#8E97FD',
+},
+
+userTypeText: {
+  color: '#A1A4B2',
+  fontWeight: 'bold',
+},
+
+userTypeTextActive: {
+  color: '#fff',
+},
+Text12: {
+  fontSize: 14,
+  color: '#A1A4B2',
+  marginLeft: 40,
+  marginBottom: 10,
+}
 
 });

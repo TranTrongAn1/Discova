@@ -1,8 +1,10 @@
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
 import { router } from 'expo-router';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const problemsData = [
   'Rối loạn lo âu',
   'Hướng nghiệp cho con',
@@ -40,6 +42,7 @@ const allAppointments = [
     }
   }
 ];
+
 const topPsychologists = psychologists
   .sort((a, b) => {
     const scoreA = a.rating * a.numberOfReviews;
@@ -50,6 +53,9 @@ const topPsychologists = psychologists
 
 // Function to format date
 const formatDate = (dateString) => {
+
+
+
   const date = new Date(dateString);
   const day = date.getDate();
   const month = date.getMonth() + 1;
@@ -67,6 +73,36 @@ const upcomingAppointments = allAppointments
   .sort((a, b) => new Date(a.date) - new Date(b.date));
 
 const Home = () => {
+  const [userName, setUserName] = useState(null); // default is null
+  const [loading, setLoading] = useState(true);
+      useEffect(() => {
+          const fetchUserName = async () => {
+          try {
+            const token = await AsyncStorage.getItem('access_token'); // Get token from storage
+            console.log('token:',token);
+                if (!token) {
+                  console.warn('No token found in storage.');
+                  return;
+                }
+
+          const response = await axios.get('http://127.0.0.1:8000/api/parents/profile/profile/', {
+            headers: {
+              Authorization: `Token ${token}`
+            }
+          });
+
+          const fullName = response.data.full_name;
+          setUserName(fullName);
+          console.log('User profile fetched successfully:', response.data);
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchUserName();
+    }, []);
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
@@ -74,7 +110,10 @@ const Home = () => {
           <Image source={Logo} style={styles.logo} resizeMode='contain' />
         </View>
         
-        <Text style={styles.text}>Chào buổi sáng, {user.name}</Text>
+            <Text style={styles.text}>
+              Chào buổi sáng{userName ? `, ${userName}` : ''}
+            </Text>
+
         
         <View style={styles.searchWrap}>
           <Text style={styles.searchTitle}>
