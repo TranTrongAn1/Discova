@@ -14,6 +14,7 @@ const ProfileLayout = () => {
       {/* ⚠️ No <Stack.Screen> declarations needed.
           Each file inside auth/ (login.tsx, register.tsx …)
           is auto-registered as a screen in this nested Stack. */}
+          
     </Stack>
   )
 }

@@ -1,64 +1,112 @@
-import { StyleSheet, Text, View, Button, TouchableOpacity, Image } from 'react-native';
-import React, { useState } from 'react';
-import default_image from '../../../assets/images/default-profile.png'; // Default image if no profile image is set
+import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import default_image from '../../../assets/images/default-profile.png';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useFocusEffect } from 'expo-router';
+
 const Info = ({ navigation }) => {
+  const [userInfo, setUserInfo] = useState(null);
 
-  // Example of mock data you could load later
-  const userInfo = {
-    img: 'https://cdn2.tuoitre.vn/thumb_w/1200/471584752817336320/2025/5/14/cristiano-ronaldo-jr-132310840-16x90-17471807958871762145-37-0-602-1080-crop-1747180832899812951086.jpg', // Replace with actual image URL
-    name: 'Dzolo',
-    birthDay: '12/11/2004',
-    gender: 'Nam',
-    phone: '0375377310',
-    email: 'hello@gmail.com',
-    address: 'Hà Nội, Việt Nam',
-    problems: ['Rối loạn lo âu', 'Mất ngủ', 'Trầm cảm'],
-  };
+  useFocusEffect(
+  React.useCallback(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found');
+          return;
+        }
 
-return (
-   <View style={styles.container}>
+        const response = await axios.get(
+          'http://127.0.0.1:8000/api/parents/profile/profile/',
+          {
+            headers: {
+              Authorization: `Token ${token}`,
+            },
+          }
+        );
+
+        const data = response.data;
+        setUserInfo({
+          img: data?.user?.profile_picture_url || null,
+          first_name: data?.first_name || '',
+          last_name: data?.last_name || '',
+          email: data?.email || '',
+          phone_number: data?.phone_number || '',
+          address_line1: data?.address_line1 || '',
+          address_line2: data?.address_line2 || '',
+        });
+
+      } catch (error) {
+        console.error('Error fetching profile:', error.response?.data || error.message);
+      }
+    };
+
+    fetchProfile();
+  }, [])
+);
+
+
+
+  if (!userInfo) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Đang tải thông tin...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
       <Text style={styles.title}>Thông tin cơ bản</Text>
 
       <View style={styles.card}>
-        <View style={styles.row}>
-          <Image
-            source={{ uri: userInfo.img || default_image }}
-            style={styles.avatar}
-          />
+          <View style={styles.row}>
+            <Image
+              source={userInfo.img ? { uri: userInfo.img } : default_image}
+              style={styles.avatar}
+            />
 
             <Text style={styles.label}>
-              <Text style={styles.bold}>Họ và Tên:</Text> {userInfo?.name || 'Chưa nhập'}
+              <Text style={styles.bold}>Họ:</Text> {userInfo.first_name || 'Chưa nhập'}
             </Text>
             <Text style={styles.label}>
-              <Text style={styles.bold}>Ngày Sinh:</Text> {userInfo?.birthDay || 'Chưa nhập'}
+              <Text style={styles.bold}>Tên:</Text> {userInfo.last_name || 'Chưa nhập'}
             </Text>
             <Text style={styles.label}>
-              <Text style={styles.bold}>Giới tính:</Text> {userInfo?.gender || 'Chưa nhập'}
+              <Text style={styles.bold}>Số điện thoại:</Text> {userInfo.phone_number || 'Chưa nhập'}
             </Text>
             <Text style={styles.label}>
-              <Text style={styles.bold}>Số điện thoại:</Text> {userInfo?.phone || 'Chưa nhập'}
+              <Text style={styles.bold}>Địa chỉ dòng 1:</Text> {userInfo.address_line1 || 'Chưa nhập'}
             </Text>
             <Text style={styles.label}>
-              <Text style={styles.bold}>Email:</Text> {userInfo?.email || 'Chưa nhập'}
+              <Text style={styles.bold}>Địa chỉ dòng 2:</Text> {userInfo.address_line2 || 'Chưa nhập'}
             </Text>
-            <Text style={styles.label}>
-              <Text style={styles.bold}>Địa chỉ:</Text> {userInfo?.address || 'Chưa nhập'}
-            </Text>
-            <Text style={styles.label}>
-              <Text style={styles.bold}>Vấn đề gặp phải:</Text>{' '}
-              {userInfo?.problems?.length > 0 ? userInfo.problems.join(', ') : 'Chưa nhập'}
-            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              router.push({
+                pathname: '/EditProfile',
+                params: {
+                  first_name: userInfo.first_name,
+                  last_name: userInfo.last_name,
+                  phone: userInfo.phone_number,
+                  address1: userInfo.address_line1,
+                  address2: userInfo.address_line2,
+                },
+              })
+            }
+          >
+            <Text style={styles.buttonText}>Chỉnh sửa</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Chỉnh sửa</Text>
-        </TouchableOpacity>
-      </View>
     </View>
-);
-
+  );
 };
-
 export default Info;
 
 const styles = StyleSheet.create({
