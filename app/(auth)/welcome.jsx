@@ -1,8 +1,28 @@
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React from 'react'
+import React, { useEffect } from 'react'
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const welcome = () => {
+
+  useEffect(() => {
+  const checkUserTypeAndRedirect = async () => {
+    try {
+      const userType = await AsyncStorage.getItem('user_type');
+
+      if (userType == 'Parent') {
+        router.replace('/(parent)/home');
+      } else if (userType == 'Psychologist') {
+        router.replace('/payment');
+      }
+    } catch (error) {
+      console.error('Error reading user_type:', error);
+    }
+  };
+
+  checkUserTypeAndRedirect();
+}, []);
+
   return (
     <View style={styles.container}>
       <View>
@@ -11,7 +31,7 @@ const welcome = () => {
       <Text style={styles.text3}>Chúng tôi sẽ giúp bạn kết nối với chuyên gia</Text>
       <Text style={styles.text4}>phù hợp để hỗ trợ con bạn tốt nhất</Text>
       </View>
-      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => router.push('/choice')}>
+      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => checkUserTypeAndRedirect()}>
               <Text style={styles.buttonText}>BẮT ĐẦU</Text>
             </TouchableOpacity>
     </View>

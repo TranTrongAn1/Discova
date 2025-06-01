@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
   import Toast from 'react-native-toast-message';
+  import AsyncStorage from '@react-native-async-storage/async-storage';
  const { width: SCREEN_WIDTH } = Dimensions.get('window'); 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -27,13 +28,22 @@ const handleLogin = async () => {
       password,
     });
 
+    const { token, user } = response.data;
+
+    // Save token and user info to AsyncStorage
+    await AsyncStorage.setItem('access_token', token);
+    await AsyncStorage.setItem('user_type', user.user_type);
+    await AsyncStorage.setItem('user_id', user.id.toString()); // optional
+
     console.log('Login successful:', response.data);
+
     Toast.show({
       type: 'success',
       text1: 'Login Successful',
       text2: 'Redirecting you...',
     });
 
+    // Navigate to welcome screen
     router.push('/welcome');
 
   } catch (error) {
