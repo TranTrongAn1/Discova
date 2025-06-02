@@ -78,10 +78,7 @@ const Info = ({ navigation }) => {
               <Text style={styles.bold}>Số điện thoại:</Text> {userInfo.phone_number || 'Chưa nhập'}
             </Text>
             <Text style={styles.label}>
-              <Text style={styles.bold}>Địa chỉ dòng 1:</Text> {userInfo.address_line1 || 'Chưa nhập'}
-            </Text>
-            <Text style={styles.label}>
-              <Text style={styles.bold}>Địa chỉ dòng 2:</Text> {userInfo.address_line2 || 'Chưa nhập'}
+              <Text style={styles.bold}>Địa chỉ dòng:</Text> {userInfo.address_line1 || 'Chưa nhập'}, {userInfo.address_line2 || 'Chưa nhập'}
             </Text>
           </View>
 
@@ -94,8 +91,8 @@ const Info = ({ navigation }) => {
                   first_name: userInfo.first_name,
                   last_name: userInfo.last_name,
                   phone: userInfo.phone_number,
-                  address1: userInfo.address_line1,
-                  address2: userInfo.address_line2,
+                  address_line1: userInfo.address_line1,
+                  address_line2: userInfo.address_line2,
                 },
               })
             }

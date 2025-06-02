@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter, useSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const EditProfile = () => {
   const router = useRouter();
@@ -15,15 +15,15 @@ const EditProfile = () => {
   const [address2, setAddress2] = useState('');
 
   // Populate the inputs when component mounts and params are available
-  useEffect(() => {
-    if (params) {
-      setFirstName(params.first_name || '');
-      setLastName(params.last_name || '');
-      setPhoneNumber(params.phone || '');
-      setAddress1(params.address1 || '');
-      setAddress2(params.address2 || '');
-    }
-  }, [params]);
+useEffect(() => {
+  if (params && Object.keys(params).length > 0) {
+    setFirstName(String(params.first_name || ''));
+    setLastName(String(params.last_name || ''));
+    setPhoneNumber(String(params.phone || ''));
+    setAddress1(String(params.address_line1 || ''));
+    setAddress2(String(params.address_line2 || ''));
+  }
+}, []); // Remove params from dependency array
 
   const handleSave = async () => {
     try {
@@ -77,17 +77,17 @@ const EditProfile = () => {
         onChangeText={setPhoneNumber}
         keyboardType="phone-pad"
       />
-      <Text style={styles.head}>Địa chỉ 1</Text>
+      <Text style={styles.head}>Số nhà</Text>
       <TextInput
         style={styles.input}
-        placeholder="Địa chỉ dòng 1"
+        placeholder="Số nhà"
         value={address1}
         onChangeText={setAddress1}
       />
-      <Text style={styles.head}>Địa chỉ 2</Text>
+      <Text style={styles.head}>Địa chỉ nhà </Text>
       <TextInput
         style={styles.input}
-        placeholder="Địa chỉ dòng 2"
+        placeholder="Địa chỉ nhà"
         value={address2}
         onChangeText={setAddress2}
       />
