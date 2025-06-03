@@ -30,7 +30,7 @@ const Info = ({ navigation }) => {
 
         const data = response.data;
         setUserInfo({
-          img: data?.user?.profile_picture_url || null,
+          img: data?.profile_picture_url || null, 
           first_name: data?.first_name || '',
           last_name: data?.last_name || '',
           email: data?.email || '',
@@ -97,6 +97,7 @@ const Info = ({ navigation }) => {
                   phone: userInfo.phone_number,
                   address_line1: userInfo.address_line1,
                   address_line2: userInfo.address_line2,
+                  profile_picture_url: userInfo.img, 
                 },
               })
             }
