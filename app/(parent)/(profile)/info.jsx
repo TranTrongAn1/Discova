@@ -7,7 +7,6 @@ import { router, useFocusEffect } from 'expo-router';
 
 const Info = ({ navigation }) => {
   const [userInfo, setUserInfo] = useState(null);
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
   useFocusEffect(
   React.useCallback(() => {
@@ -20,7 +19,7 @@ const Info = ({ navigation }) => {
         }
 
         const response = await axios.get(
-          `${apiUrl}/api/parents/profile/profile/`,
+          'http://127.0.0.1:8000/api/parents/profile/profile/',
           {
             headers: {
               Authorization: `Token ${token}`,
