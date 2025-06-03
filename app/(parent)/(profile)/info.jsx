@@ -7,7 +7,6 @@ import { router, useFocusEffect } from 'expo-router';
 
 const Info = ({ navigation }) => {
   const [userInfo, setUserInfo] = useState(null);
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
   useFocusEffect(
   React.useCallback(() => {
