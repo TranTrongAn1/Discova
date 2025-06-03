@@ -1,21 +1,21 @@
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  TextInput,
   Dimensions,
-  TouchableWithoutFeedback,
   Keyboard,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-import React, { useState } from 'react';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import axios from 'axios';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -23,11 +23,13 @@ const Register = () => {
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
   const [agreePolicy, setAgreePolicy] = useState(false);
-  const [showPwd, setShowPwd]  = useState(false); 
-  const [showPwd1, setShowPwd1]  = useState(false); 
+  const [showPwd, setShowPwd]  = useState(false);
+  const [showPwd1, setShowPwd1]  = useState(false);
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [userType, setUserType] = useState('Parent'); // Default value
   const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
@@ -47,6 +49,7 @@ const Register = () => {
 
 
       <Text style={styles.Welcome}>Tạo Tài Khoản</Text>
+      <Text style={styles.Welcome}>API URL USING: {apiUrl}</Text>
 
       {/* Social sign-up placeholders */}
       <Text style={styles.Welcome}>Facebook</Text>
@@ -185,7 +188,7 @@ const Register = () => {
             };
 
             try {
-              const { data } = await axios.post('http://127.0.0.1:8000/api/auth/register/', payload);
+              const { data } = await axios.post(`${apiUrl}/api/auth/register/`, payload);
 
               Toast.show({
                 type: 'success',

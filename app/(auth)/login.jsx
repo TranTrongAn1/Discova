@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
 
 
@@ -24,7 +25,7 @@ const handleLogin = async () => {
   }
 
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/auth/login/', {
+    const response = await axios.post(`${apiUrl}/api/auth/login/`, {
       email,
       password,
     });

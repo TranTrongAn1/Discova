@@ -13,6 +13,7 @@ const EditProfile = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
   // Populate the inputs when component mounts and params are available
 useEffect(() => {
@@ -29,7 +30,7 @@ useEffect(() => {
     try {
       const token = await AsyncStorage.getItem('access_token');
       await axios.patch(
-        'http://127.0.0.1:8000/api/parents/profile/update_profile/',
+        `${apiUrl}/api/parents/profile/update_profile/`,
         {
           first_name: firstName,
           last_name: lastName,

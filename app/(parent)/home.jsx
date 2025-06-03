@@ -16,6 +16,9 @@ const problemsData = [
 const user = {
   name: 'Ronaldo',
 }
+
+const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+
 const allAppointments = [
   {
     expert: 'ThS. Trần Thị Thu Vân',
@@ -85,7 +88,7 @@ const Home = () => {
                   return;
                 }
 
-          const response = await axios.get('http://127.0.0.1:8000/api/parents/profile/profile/', {
+          const response = await axios.get(`${apiUrl}/api/parents/profile/profile/`, {
             headers: {
               Authorization: `Token ${token}`
             }
