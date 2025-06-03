@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import default_image from '../../../assets/images/default-profile.png';
-import axios from 'axios';
+import api from '../../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 
@@ -18,8 +18,8 @@ const Info = ({ navigation }) => {
           return;
         }
 
-        const response = await axios.get(
-          'http://127.0.0.1:8000/api/parents/profile/profile/',
+        const response = await api.get(
+          'api/parents/profile/profile/',
           {
             headers: {
               Authorization: `Token ${token}`,
@@ -61,13 +61,16 @@ const Info = ({ navigation }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Thông tin cơ bản</Text>
 
-      <View style={styles.card}>
-          <View style={styles.row}>
-            <Image
-              source={userInfo.img ? { uri: userInfo.img } : default_image}
-              style={styles.avatar}
-            />
+        <View style={styles.card}>
+          <View style={styles.avatarRow}>
+              <Image
+                source={userInfo.img && userInfo.img.startsWith('http') ? { uri: userInfo.img } : default_image}
+                style={styles.avatar}
+              />
 
+          </View>
+
+          <View style={styles.infoBlock}>
             <Text style={styles.label}>
               <Text style={styles.bold}>Họ:</Text> {userInfo.first_name || 'Chưa nhập'}
             </Text>
@@ -78,7 +81,7 @@ const Info = ({ navigation }) => {
               <Text style={styles.bold}>Số điện thoại:</Text> {userInfo.phone_number || 'Chưa nhập'}
             </Text>
             <Text style={styles.label}>
-              <Text style={styles.bold}>Địa chỉ dòng:</Text> {userInfo.address_line1 || 'Chưa nhập'}, {userInfo.address_line2 || 'Chưa nhập'}
+              <Text style={styles.bold}>Địa chỉ:</Text> {userInfo.address_line1 || 'Chưa nhập'}, {userInfo.address_line2 || 'Chưa nhập'}
             </Text>
           </View>
 
@@ -100,6 +103,7 @@ const Info = ({ navigation }) => {
             <Text style={styles.buttonText}>Chỉnh sửa</Text>
           </TouchableOpacity>
         </View>
+
 
     </View>
   );
@@ -166,4 +170,19 @@ const styles = StyleSheet.create({
     marginRight: 15,
     marginBottom: 10,
   },
+  avatarRow: {
+  alignItems: 'center',
+  marginBottom: 20,
+},
+infoBlock: {
+  paddingHorizontal: 10,
+},
+avatar: {
+  width: 120,
+  height: 120,
+  borderRadius: 60,
+  borderWidth: 2,
+  borderColor: '#7B8CE4', // Optional: a nice color ring
+},
+
 });

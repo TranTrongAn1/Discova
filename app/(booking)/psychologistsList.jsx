@@ -1,124 +1,124 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const psychologists = [
-  {
-    name: 'BS CKI. Vũ Thị Hà',
-    specialty: 'Điều trị, tư vấn các bệnh lý về mắt như đục thủy tinh thể, glaucoma...',
-    schedule: 'Thứ 2,3,4,5,6,7, Chủ nhật, Hẹn khám',
-    price: '150.000',
-    image: 'https://randomuser.me/api/portraits/women/44.jpg',
-  },
-  {
-    name: 'BS. Nguyễn Văn An',
-    specialty: 'Tư vấn và trị liệu rối loạn lo âu, trầm cảm, stress...',
-    schedule: 'Thứ 2,4,6, Chủ nhật',
-    price: '200.000',
-    image: 'https://randomuser.me/api/portraits/men/32.jpg',
-  },
-  {
-    name: 'BS. Trần Thị Lan',
-    specialty: 'Chuyên điều trị tâm lý trẻ em, tự kỷ, tăng động giảm chú ý...',
-    schedule: 'Thứ 3,5,7',
-    price: '180.000',
-    image: 'https://randomuser.me/api/portraits/women/68.jpg',
-  },
-  {
-    name: 'BS. Lê Đức Minh',
-    specialty: 'Trị liệu tâm lý hôn nhân, gia đình, tiền hôn nhân...',
-    schedule: 'Thứ 2 - 6',
-    price: '220.000',
-    image: 'https://randomuser.me/api/portraits/men/54.jpg',
-  },
-  {
-    name: 'BS. Nguyễn Thị Hoa',
-    specialty: 'Tư vấn tâm lý học đường, hành vi học sinh...',
-    schedule: 'Thứ 4,5,6',
-    price: '160.000',
-    image: 'https://randomuser.me/api/portraits/women/22.jpg',
-  },
-  {
-    name: 'BS. Phạm Văn Khôi',
-    specialty: 'Chuyên trị liệu chấn thương tâm lý sau tai nạn, PTSD...',
-    schedule: 'Thứ 2 - Chủ nhật',
-    price: '250.000',
-    image: 'https://randomuser.me/api/portraits/men/73.jpg',
-  },
-  {
-    name: 'BS. Đỗ Thị Hạnh',
-    specialty: 'Trị liệu nhóm, điều trị mất ngủ, suy nhược thần kinh...',
-    schedule: 'Thứ 2,3,6',
-    price: '190.000',
-    image: 'https://randomuser.me/api/portraits/women/45.jpg',
-  },
-  {
-    name: 'BS. Hoàng Minh Đức',
-    specialty: 'Điều trị rối loạn lưỡng cực, rối loạn nhân cách...',
-    schedule: 'Thứ 3,5,7',
-    price: '230.000',
-    image: 'https://randomuser.me/api/portraits/men/29.jpg',
-  },
-  // ➕ Add more mock data as needed
-];
-
-
-
-const PAGE_SIZE = 6;
+const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/70x70.png?text=Avatar';
 
 const PsychologistsList = () => {
   const router = useRouter();
-  const [visibleData, setVisibleData] = useState(psychologists.slice(0, PAGE_SIZE));
-  const [page, setPage] = useState(1);
+  const [data, setData] = useState([]);
+  const [nextUrl, setNextUrl] = useState('http://kmdiscova.id.vn/api/psychologists/marketplace/');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const loadMore = useCallback(() => {
-    const start = page * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    const nextData = psychologists.slice(start, end);
+  const fetchData = useCallback(async () => {
+    if (!nextUrl || loading) return;
 
-    if (nextData.length > 0) {
-      setVisibleData(prev => [...prev, ...nextData]);
-      setPage(prev => prev + 1);
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found');
+          return;
+        }
+      const res = await axios.get(nextUrl, {
+                    headers: {
+              Authorization: `Token ${token}`,
+            },
+      });
+      if (res.data?.results?.length) {
+        setData(prev => [...prev, ...res.data.results]);
+        setNextUrl(res.data.next);
+        console.log('Psychologist ID:', data.user);
+      } else if (data.length === 0) {
+        setError('Không có nhà tâm lý nào để hiển thị.');
+      }
+    } catch (err) {
+      setError('Lỗi khi tải dữ liệu.');
+      console.error('Fetch error:', err.message);
+    } finally {
+      setLoading(false);
     }
-  }, [page]);
+  }, [nextUrl, loading]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      <Image source={{ uri: item.image }} style={styles.image} />
+      <Image source={{ uri: PLACEHOLDER_IMAGE }} style={styles.image} />
       <View style={styles.cardContent}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.description}>{item.specialty}</Text>
-        <Text style={styles.schedule}>Lịch khám: {item.schedule}</Text>
-        <Text style={styles.fee}>Giá khám: {item.price}đ</Text>
-        <TouchableOpacity style={styles.button} onPress={() => router.push(`/psychologistDetails?name=${encodeURIComponent(item.name)}`)}>
-          <Text style={styles.buttonText}>Xem chi tiết</Text>
-        </TouchableOpacity>
+        <Text style={styles.name}>{item.full_name}</Text>
+        <Text style={styles.experience}>Kinh nghiệm: {item.years_of_experience} năm</Text>
+        <Text style={styles.biography}>{item.biography}</Text>
+          <Text style={styles.pricing}>
+            {item.pricing
+              ? `Giá: Tư vấn ban đầu - ${item.pricing.initial_consultation_rate} ${item.pricing.currency}, Online - ${item.pricing.online_session_rate} ${item.pricing.currency}`
+              : 'Chưa có thông tin giá'}
+          </Text>
+
+
+        <Text style={styles.consultation}>
+          Hình thức:{' '}
+          {item.offers_online_sessions && item.offers_initial_consultation
+            ? 'Trực tiếp, Online'
+            : item.offers_online_sessions
+            ? 'Online'
+            : item.offers_initial_consultation
+            ? 'Trực tiếp'
+            : 'Không có thông tin'}
+        </Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() =>
+                router.push(`/psychologistDetails?id=${item.user}`)
+              }
+            >
+              <Text style={styles.buttonText}>Xem chi tiết</Text>
+            </TouchableOpacity>
+
+
       </View>
     </View>
   );
 
-  return (
-    <View style={styles.container}>
-      {/* Top bar with back button */}
-            {/* Back Button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color="#333" />
-      </TouchableOpacity>
+return (
+  <View style={styles.container}>
+    {/* Always show back button at the top */}
+    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+      <Ionicons name="arrow-back" size={24} color="#333" />
+    </TouchableOpacity>
+
+    {/* Main content: FlatList or empty message */}
+    {data.length === 0 && !loading ? (
+      <Text style={styles.emptyText}>
+        {error || 'Hiện chưa có nhà tâm lý nào để hiển thị.'}
+      </Text>
+    ) : (
       <FlatList
-        data={visibleData}
+        data={data}
         keyExtractor={(item, index) => index.toString()}
         renderItem={renderItem}
-        onEndReached={loadMore}
+        onEndReached={fetchData}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          visibleData.length < psychologists.length ? (
-            <Text style={styles.loadingText}>Đang tải thêm...</Text>
-          ) : null
-        }
+        ListFooterComponent={loading && <ActivityIndicator size="small" color="#00cfff" />}
       />
-    </View>
-  );
+    )}
+  </View>
+);
+
 };
 
 export default PsychologistsList;
@@ -148,42 +148,47 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    justifyContent: 'center',
   },
   name: {
     fontWeight: 'bold',
     fontSize: 16,
     color: '#333',
   },
-  description: {
+  experience: {
+    fontSize: 13,
+    color: '#555',
+  },
+  biography: {
     fontSize: 13,
     color: '#666',
     marginVertical: 2,
   },
-  schedule: {
-    fontSize: 12,
+  pricing: {
+    fontSize: 13,
     color: '#444',
+    marginVertical: 2,
   },
-  fee: {
+  consultation: {
     fontSize: 12,
     color: '#999',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   button: {
     backgroundColor: '#00cfff',
     borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     alignSelf: 'flex-start',
   },
   buttonText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: 13,
   },
-  loadingText: {
+  emptyText: {
     textAlign: 'center',
-    padding: 12,
+    padding: 20,
     color: '#666',
+    fontSize: 15,
   },
 });

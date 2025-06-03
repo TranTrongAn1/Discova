@@ -85,7 +85,7 @@ const Home = () => {
                   return;
                 }
 
-          const response = await axios.get('http://127.0.0.1:8000/api/parents/profile/profile/', {
+          const response = await axios.get('http://kmdiscova.id.vn/api/parents/profile/profile/', {
             headers: {
               Authorization: `Token ${token}`
             }

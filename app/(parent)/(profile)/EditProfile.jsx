@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView } from 'react-native';
-import axios from 'axios';
+import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity, Image } from 'react-native';
+import api from '../../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 const EditProfile = () => {
   const router = useRouter();
@@ -13,6 +14,49 @@ const EditProfile = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
+const [imageUrl, setImageUrl] = useState('');
+
+const pickImageAndUpload = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your media library');
+      return;
+    }
+
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 4],
+        quality: 1,
+      });
+
+
+  if (!result.canceled) {
+    const image = result.assets[0];
+    const formData = new FormData();
+    formData.append('file', {
+      uri: image.uri,
+      name: 'profile.jpg',
+      type: 'image/jpeg',
+    });
+    formData.append('upload_preset', 'converts'); // Replace with your actual unsigned preset
+
+    try {
+      const res = await fetch('https://api.cloudinary.com/v1_1/du7snch3r/image/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      setImageUrl(data.secure_url);
+      Alert.alert('✅ Tải ảnh thành công');
+    } catch (err) {
+      console.error('Upload failed:', err);
+      Alert.alert('❌ Lỗi', 'Tải ảnh thất bại');
+    }
+  }
+};
 
   // Populate the inputs when component mounts and params are available
 useEffect(() => {
@@ -22,20 +66,22 @@ useEffect(() => {
     setPhoneNumber(String(params.phone || ''));
     setAddress1(String(params.address_line1 || ''));
     setAddress2(String(params.address_line2 || ''));
+     setImageUrl(String(params.profile_picture_url || ''));
   }
 }, []); // Remove params from dependency array
 
   const handleSave = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      await axios.patch(
-        'http://127.0.0.1:8000/api/parents/profile/update_profile/',
+      await api.patch(
+        'api/parents/profile/update_profile/',
         {
           first_name: firstName,
           last_name: lastName,
           phone_number: phoneNumber,
           address_line1: address1,
           address_line2: address2,
+           profile_picture_url: imageUrl,
         },
         {
           headers: {
@@ -55,6 +101,18 @@ useEffect(() => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Chỉnh sửa thông tin</Text>
+      <Text style={styles.head}>Ảnh đại diện</Text>
+        <TouchableOpacity onPress={pickImageAndUpload} style={styles.uploadButton}>
+          <Text style={{ color: '#fff', textAlign: 'center' }}>Chọn ảnh</Text>
+        </TouchableOpacity>
+
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={{ width: 100, height: 100, borderRadius: 50, marginVertical: 10 }}
+          />
+        ) : null}
+
       <Text style={styles.head}>Họ</Text>
       <TextInput
         style={styles.input}
@@ -123,4 +181,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 5,
   },
+  uploadButton: {
+  backgroundColor: '#7B8CE4',
+  paddingVertical: 10,
+  borderRadius: 6,
+  marginBottom: 15,
+},
+
 });

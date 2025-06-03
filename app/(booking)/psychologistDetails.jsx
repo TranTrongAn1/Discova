@@ -1,64 +1,114 @@
-import { StyleSheet, Text, View, Image, ScrollView, TouchableOpacity } from 'react-native';
-import React from 'react';
-import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StyleSheet, Text, View, Image, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const psychologist = {
-  name: 'BS CKI. Vũ Thị Hà',
-  specialty: 'Tư vấn và điều trị tâm lý học đường, trầm cảm, lo âu, rối loạn cảm xúc...',
-  introduction:
-    'Bác sĩ Hà là chuyên gia hàng đầu trong lĩnh vực tâm lý học đường với hơn 15 năm kinh nghiệm. Bà đã giúp hàng trăm học sinh vượt qua các vấn đề về lo âu, trầm cảm và định hướng học tập.',
-  price: '150.000',
-  image: 'https://randomuser.me/api/portraits/women/44.jpg',
-  schedule: {
-    'Thứ 2': ['8:00-9:00', '9:00-10:00'],
-    'Thứ 3': ['10:00-11:00', '13:00-14:00'],
-    'Thứ 5': ['14:00-15:00', '15:00-16:00'],
-    'Thứ 7': ['8:00-9:00', '9:00-10:00'],
-  },
-};
-
+import axios from 'axios'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const PsychologistDetails = () => {
+  const { id } = useLocalSearchParams(); // get id from route
   const router = useRouter();
+  const [psychologist, setPsychologist] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  console.log('Psychologist ID:', id); // Log the ID to ensure it's correct
+    const fetchPsychologist = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found');
+          return;
+        }
+        const res = await axios.get(`http://kmdiscova.id.vn/api/psychologists/marketplace/${id}/`,{
+          headers: {
+              Authorization: `Token ${token}`,
+            },});
+        setPsychologist(res.data);
+      } catch (err) {
+        console.error('Failed to fetch psychologist:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPsychologist();
+  }, [id]);
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
+
+  if (!psychologist) return <Text style={{ padding: 20 }}>Không tìm thấy thông tin bác sĩ.</Text>;
+
+  const {
+    full_name,
+    user,
+    years_of_experience,
+    biography,
+    hourly_rate,
+    initial_consultation_rate,
+    offers_initial_consultation,
+    offers_online_sessions,
+    services_offered
+  } = psychologist;
 
   return (
     <ScrollView style={styles.container}>
-      {/* Back button */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>
 
-      {/* Image + Name + Specialty */}
       <View style={styles.headerRow}>
-        <Image source={{ uri: psychologist.image }} style={styles.profileImage} />
+        <Image source={{ uri: user?.profile_picture_url || 'https://via.placeholder.com/100' }} style={styles.profileImage} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{psychologist.name}</Text>
-          <Text style={styles.specialty}>{psychologist.specialty}</Text>
+          <Text style={styles.name}>{full_name}</Text>
+          <Text style={styles.specialty}>{years_of_experience} năm kinh nghiệm</Text>
         </View>
       </View>
 
-      {/* Introduction */}
       <Text style={styles.sectionTitle}>Giới thiệu</Text>
-      <Text style={styles.introduction}>{psychologist.introduction}</Text>
+      <Text style={styles.introduction}>{biography}</Text>
 
-      {/* Schedule */}
-      <Text style={styles.sectionTitle}>Lịch khám</Text>
-      <View style={styles.scheduleContainer}>
-        {Object.entries(psychologist.schedule).map(([day, times]) => (
-          <View key={day} style={styles.scheduleRow}>
-            <Text style={styles.day}>{day}</Text>
-            <Text style={styles.timeSlots}>{times.join(', ')}</Text>
-          </View>
-        ))}
-      </View>
+      <Text style={styles.sectionTitle}>Dịch vụ</Text>
+      <Text style={styles.introduction}>
+        {offers_initial_consultation ? 'Tư vấn trực tiếp, ' : ''}
+        {offers_online_sessions ? 'Tư vấn online, ' : ''}
+        {services_offered?.join(', ')}
+      </Text>
 
-      {/* Price */}
-      <Text style={styles.price}>Giá: {psychologist.price} VNĐ</Text>
+      <Text style={styles.price}>
+        Giá tư vấn online: {hourly_rate} VNĐ{"\n"}
+        Giá tư vấn trực tiếp: {initial_consultation_rate} VNĐ
+      </Text>
 
-      {/* Booking Button */}
-      <TouchableOpacity style={styles.bookButton} onPress={()=> router.push('/bookingPage')}>
-        <Text style={styles.bookButtonText}>Đặt lịch ngay</Text>
-      </TouchableOpacity>
+<View style={styles.buttonRow}>
+  {offers_initial_consultation && (
+    <TouchableOpacity
+      style={[styles.bookButton, { backgroundColor: '#7B8CE4' }]}
+      onPress={() =>
+        router.push({
+          pathname: '/bookingPage',
+          params: { id: user, type: 'offline' },
+        })
+      }
+    >
+      <Text style={styles.bookButtonText}>Tư vấn ban đầu</Text>
+    </TouchableOpacity>
+  )}
+
+  {offers_online_sessions && (
+    <TouchableOpacity
+      style={[styles.bookButton, { backgroundColor: '#6CB28E' }]}
+      onPress={() =>
+        router.push({
+          pathname: '/bookingPage',
+          params: { id: user, type: 'online' },
+        })
+      }
+    >
+      <Text style={styles.bookButtonText}>Tư vấn online</Text>
+    </TouchableOpacity>
+  )}
+</View>
+
     </ScrollView>
   );
 };
@@ -69,7 +119,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     backgroundColor: '#fff',
-    flex: 1,    
+    flex: 1,
     paddingTop: 50, // Adjust for status bar height
   },
   backButton: {
@@ -111,23 +161,6 @@ const styles = StyleSheet.create({
     color: '#555',
     lineHeight: 22,
   },
-  scheduleContainer: {
-    marginTop: 8,
-  },
-  scheduleRow: {
-    marginBottom: 8,
-  },
-  day: {
-    fontWeight: 'bold',
-    fontSize: 15,
-    color: '#333',
-  },
-  timeSlots: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
-    marginTop: 2,
-  },
   price: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -146,4 +179,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  buttonRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  gap: 10,
+  marginTop: 20,
+},
+
+bookButton: {
+  flex: 1,
+  paddingVertical: 14,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+
+bookButtonText: {
+  color: '#fff',
+  fontSize: 15,
+  fontWeight: '600',
+},
+
 });
+

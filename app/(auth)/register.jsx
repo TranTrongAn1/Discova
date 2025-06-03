@@ -185,7 +185,7 @@ const Register = () => {
             };
 
             try {
-              const { data } = await axios.post('http://127.0.0.1:8000/api/auth/register/', payload);
+              const { data } = await axios.post('http://kmdiscova.id.vn/auth/register/', payload);
 
               Toast.show({
                 type: 'success',
