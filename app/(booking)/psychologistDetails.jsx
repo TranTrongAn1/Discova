@@ -86,7 +86,7 @@ useEffect(() => {
       onPress={() =>
         router.push({
           pathname: '/bookingPage',
-          params: { id: user, type: 'offline' },
+          params: { id: `${id}`, type: 'offline' },
         })
       }
     >
@@ -100,7 +100,7 @@ useEffect(() => {
       onPress={() =>
         router.push({
           pathname: '/bookingPage',
-          params: { id: user, type: 'online' },
+          params: { id: `${id}`, type: 'online' },
         })
       }
     >

@@ -56,7 +56,7 @@ const ConfirmPage = () => {
       <TouchableOpacity style={styles.confirmButton} onPress={()=> router.push('/receipt')}>
         <Text style={styles.confirmText}>XÁC NHẬN & THANH TOÁN</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.backButton}>
+      <TouchableOpacity style={styles.backButton} onPress={router.back}>
         <Text style={styles.backText}>QUAY LẠI</Text>
       </TouchableOpacity>
     </ScrollView>

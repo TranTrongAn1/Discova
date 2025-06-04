@@ -1,17 +1,16 @@
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router,useLocalSearchParams} from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert,
 } from 'react-native';
+import api from '../(auth)/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const timeSlots = [
-  '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
-  '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00',
-];
+// Inside your component
 
-const days = ['Thứ 2', 'Thứ 3', 'Thứ 5', 'Thứ 7'];
 
 const BookingPage = () => {
+  const [availableSlots, setAvailableSlots] = useState({});
   const [selectedSlots, setSelectedSlots] = useState({});
   const [mode, setMode] = useState('Online');
   const [specialRequest, setSpecialRequest] = useState('');
@@ -20,136 +19,196 @@ const BookingPage = () => {
   const [email, setEmail] = useState('');
   const [notify, setNotify] = useState('Có');
 
-  const toggleSlot = (day, time) => {
-    const key = `${day}-${time}`;
-    setSelectedSlots((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-const handleSubmit = () => {
-  if (!name || !phone || !email || Object.values(selectedSlots).every((v) => !v)) {
-    Alert.alert('Thông báo', 'Vui lòng điền đầy đủ thông tin và chọn ít nhất một khung giờ.');
-    return;
-  }
-
-  Alert.alert(
-    'Xác nhận đặt lịch',
-    'Bạn sẽ được chuyển đến trang thanh toán.',
-    [
-      {
-        text: 'Hủy',
-        style: 'cancel',
-      },
-      {
-        text: 'Đồng ý',
-        onPress: () => {
-          // You can store the booking data using state management, context, or pass via route if needed
-          router.push('/confirmPage');
-        },
-      },
-    ]
-  );
-};
+  const { id, type } = useLocalSearchParams(); // ✅ get passed parameters
+  const psychologistId = id; // ✅ dynamic psychologist ID
 
 
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Bạn muốn tư vấn vào khung giờ nào?</Text>
+      const fetchAvailableSlots = async () => {
+        const today = new Date();
+        const dateFrom = today.toISOString().split('T')[0];
+        const dateTo = new Date(today.setDate(today.getDate() + 30)).toISOString().split('T')[0];
+        console.log('typeof id:', id);
+        try {
+          const token = await AsyncStorage.getItem('access_token');
+          if (!token) {
+            console.warn('No token found');
+            return;
+          }
 
-      {days.map((day) => (
-        <View key={day} style={styles.dayBlock}>
-          <Text style={styles.dayLabel}>{day}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {timeSlots.map((time) => {
-              const isSelected = selectedSlots[`${day}-${time}`];
-              return (
-                <TouchableOpacity
-                  key={`${day}-${time}`}
-                  style={[styles.slot, isSelected && styles.slotSelected]}
-                  onPress={() => toggleSlot(day, time)}
-                >
-                  <Text style={[styles.slotText, isSelected && { color: '#fff' }]}>{time}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+          const response = await api.get(
+            `/api/appointments/slots/available_for_booking/?psychologist_id=${psychologistId}&session_type=${mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation'}&date_from=${dateFrom}&date_to=${dateTo}`,
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+              },
+            }
+          );
+
+          const data = response.data;
+
+          if (!data.available_slots || data.available_slots.length === 0) {
+            setAvailableSlots(null); // <-- no slots available
+            return;
+          }
+
+          const grouped = {};
+          data.available_slots.forEach(slot => {
+            const key = slot.date; 
+            const timeRange = `${slot.start_time}-${slot.end_time}`;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push({ ...slot, timeRange });
+          });
+
+          setAvailableSlots(grouped);
+        } catch (error) {
+          console.error('Failed to fetch slots:', error);
+          setAvailableSlots('error'); // <-- distinguish error
+        }
+      };
+
+
+
+        useEffect(() => {
+          fetchAvailableSlots();
+        }, [mode]);
+
+        const toggleSlot = (day, time) => {
+          const key = `${day}-${time}`;
+          setSelectedSlots((prev) => ({
+            ...prev,
+            [key]: !prev[key],
+          }));
+        };
+
+      const handleSubmit = () => {
+        if (!name || !phone || !email || Object.values(selectedSlots).every((v) => !v)) {
+          Alert.alert('Thông báo', 'Vui lòng điền đầy đủ thông tin và chọn ít nhất một khung giờ.');
+          return;
+        }
+
+        Alert.alert(
+          'Xác nhận đặt lịch',
+          'Bạn sẽ được chuyển đến trang thanh toán.',
+          [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Đồng ý', onPress: () => router.push('/confirmPage') },
+          ]
+        );
+      };
+return (
+  <ScrollView style={styles.container}>
+    <Text style={styles.title}>Bạn muốn tư vấn vào khung giờ nào?</Text>
+
+    {typeof availableSlots === 'string' && availableSlots === 'error' ? (
+      <Text style={{ color: 'red' }}>Đã xảy ra lỗi khi tải khung giờ. Vui lòng thử lại sau.</Text>
+    ) : !availableSlots || Object.keys(availableSlots).length === 0 ? (
+      <Text style={{ color: '#666' }}>Chuyên gia này hiện chưa có khung giờ khả dụng.</Text>
+    ) : (
+      Object.entries(availableSlots).map(([day, slots]) => {
+        // Here is where you define dayLabel:
+        const dayLabel = new Date(day).toLocaleDateString('vi-VN', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'numeric',
+        });
+
+        return (
+          <View key={day} style={styles.dayBlock}>
+            <Text style={styles.dayLabel}>{dayLabel}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {Array.isArray(slots) &&
+                slots.map((slot) => {
+                  const key = `${day}-${slot.timeRange}`;
+                  const isSelected = selectedSlots[key];
+                  return (
+                    <TouchableOpacity
+                      key={slot.slot_id}
+                      style={[styles.slot, isSelected && styles.slotSelected]}
+                      onPress={() => toggleSlot(day, slot.timeRange)}
+                    >
+                      <Text style={[styles.slotText, isSelected && { color: '#fff' }]}>{slot.timeRange}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+            </ScrollView>
+          </View>
+        );
+      })
+    )}
+
+    {/* The rest of your UI code unchanged */}
+    <Text style={styles.title}>Bạn muốn tư vấn theo hình thức nào?</Text>
+    <View style={styles.columnOptions}>
+      <TouchableOpacity
+        style={[styles.methodOption, mode === 'Trực tiếp' && styles.selectedMethod]}
+        onPress={() => setMode('Trực tiếp')}
+      >
+        <Text>Trực tiếp - 799.000đ / 1 tiếng</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.methodOption, mode === 'Online' && styles.selectedMethod]}
+        onPress={() => setMode('Online')}
+      >
+        <Text>Online - 599.000đ / 1 tiếng</Text>
+      </TouchableOpacity>
+    </View>
+
+    <Text style={styles.title}>Bạn có yêu cầu hình thức tư vấn đặc biệt nào không?</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="Mô tả yêu cầu đặc biệt..."
+      placeholderTextColor="#999"
+      value={specialRequest}
+      onChangeText={setSpecialRequest}
+    />
+
+    <Text style={styles.title}>Thông tin cá nhân</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="Họ và tên của bạn"
+      placeholderTextColor="#999"
+      value={name}
+      onChangeText={setName}
+    />
+    <TextInput
+      style={styles.input}
+      placeholder="Số điện thoại của bạn"
+      placeholderTextColor="#999"
+      value={phone}
+      keyboardType="phone-pad"
+      onChangeText={setPhone}
+    />
+    <TextInput
+      style={styles.input}
+      placeholder="Email của bạn"
+      placeholderTextColor="#999"
+      value={email}
+      keyboardType="email-address"
+      onChangeText={setEmail}
+    />
+
+    <Text style={styles.title}>Bạn có muốn nhận thông báo về lịch hẹn qua email không?</Text>
+    <View style={styles.columnOptions}>
+      {['Có', 'Không'].map((option) => (
+        <TouchableOpacity
+          key={option}
+          style={[styles.notifyOption, notify === option && styles.notifySelected]}
+          onPress={() => setNotify(option)}
+        >
+          <Text style={{ color: notify === option ? '#fff' : '#000' }}>{option}</Text>
+        </TouchableOpacity>
       ))}
+    </View>
 
-      <Text style={styles.title}>Bạn muốn tư vấn theo hình thức nào?</Text>
-      <View style={styles.columnOptions}>
-        <TouchableOpacity
-          style={[styles.methodOption, mode === 'Trực tiếp' && styles.selectedMethod]}
-          onPress={() => setMode('Trực tiếp')}
-        >
-          <Text>Trực tiếp - 799.000đ / 1 tiếng</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.methodOption, mode === 'Online' && styles.selectedMethod]}
-          onPress={() => setMode('Online')}
-        >
-          <Text>Online - 599.000đ / 1 tiếng</Text>
-        </TouchableOpacity>
-      </View>
+    <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+      <Text style={styles.submitText}>Đến trang thanh toán</Text>
+    </TouchableOpacity>
 
-      <Text style={styles.title}>Bạn có yêu cầu hình thức tư vấn đặc biệt nào không?</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Mô tả yêu cầu đặc biệt..."
-        placeholderTextColor="#999"
-        value={specialRequest}
-        onChangeText={setSpecialRequest}
-      />
-
-      <Text style={styles.title}>Thông tin cá nhân</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Họ và tên của bạn"
-        placeholderTextColor="#999"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Số điện thoại của bạn"
-        placeholderTextColor="#999"
-        value={phone}
-        keyboardType="phone-pad"
-        onChangeText={setPhone}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email của bạn"
-        placeholderTextColor="#999"
-        value={email}
-        keyboardType="email-address"
-        onChangeText={setEmail}
-      />
-
-      <Text style={styles.title}>Bạn có muốn nhận thông báo về lịch hẹn qua email không?</Text>
-      <View style={styles.columnOptions}>
-        {['Có', 'Không'].map((option) => (
-          <TouchableOpacity
-            key={option}
-            style={[styles.notifyOption, notify === option && styles.notifySelected]}
-            onPress={() => setNotify(option)}
-          >
-            <Text style={{ color: notify === option ? '#fff' : '#000' }}>{option}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Đến trang thanh toán</Text>
-      </TouchableOpacity>
-     <Text style={styles.test} onPress={()=> router.push('/confirmPage')}>confirm test</Text>
-      <TouchableOpacity onPress={router.back}>
-        <Text style={styles.backText}>QUAY LẠI</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
+    <TouchableOpacity onPress={router.back}>
+      <Text style={styles.backText}>QUAY LẠI</Text>
+    </TouchableOpacity>
+  </ScrollView>
+);
 };
 
 export default BookingPage;
@@ -248,9 +307,4 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 70,
   },
-  test: {
-    color: 'red',
-    paddingVertical: 20,
-    fontSize: 20,
-  }
 });
