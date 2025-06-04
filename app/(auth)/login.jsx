@@ -35,6 +35,28 @@ const handleLogin = async () => {
     await AsyncStorage.setItem('access_token', token);
     await AsyncStorage.setItem('user_type', user.user_type);
     await AsyncStorage.setItem('user_id', user.id.toString()); // optional
+      try {
+        const childrenResponse = await axios.get(`https://kmdiscova.id.vn/api/children/profile/my_children`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const childrenData = childrenResponse.data;
+
+        // ✅ Get only the first child's ID
+        const firstChildId = childrenData.results?.[0]?.id;
+
+        if (firstChildId) {
+          await AsyncStorage.setItem('child_id', firstChildId);
+          console.log('Saved first child ID:', firstChildId);
+        } else {
+          console.log('No children found.');
+        }
+
+      } catch (childrenError) {
+        console.log('Failed to fetch children:', childrenError.response?.data || childrenError.message);
+      }
 
     console.log('Login successful:', response.data);
 

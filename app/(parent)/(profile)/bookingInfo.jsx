@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-
+import api from '../../(auth)/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // Get the current week's dates (Monday to Sunday)
 const getCurrentWeek = () => {
   const today = new Date();
@@ -27,42 +28,63 @@ const getCurrentWeek = () => {
   });
 };
 
-// Simulated appointment data for multiple days
-const sampleAppointments = {
-  '2025-05-26': [
-    {
-      startHour: 9,
-      endHour: 10,
-      title: 'Child therapy session',
-      avatars: [
-        'https://randomuser.me/api/portraits/men/1.jpg',
-        'https://randomuser.me/api/portraits/women/2.jpg',
-      ],
-    },
-    {
-      startHour: 13,
-      endHour: 14,
-      title: 'Parent follow-up call',
-      avatars: ['https://randomuser.me/api/portraits/women/3.jpg'],
-    },
-  ],
-  '2025-05-27': [
-    {
-      startHour: 10,
-      endHour: 11,
-      title: 'Session with new client',
-      avatars: ['https://randomuser.me/api/portraits/men/4.jpg'],
-    },
-  ],
-};
 
 const BookingInfo = () => {
   const week = getCurrentWeek();
   const todayIndex = week.findIndex((d) => d.isToday);
   const [selectedDateKey, setSelectedDateKey] = useState(week[todayIndex].key);
+  const [appointmentsData, setAppointmentsData] = useState({});
 
   const hours = Array.from({ length: 10 }, (_, i) => 8 + i); // 08:00 to 17:00
-  const appointments = sampleAppointments[selectedDateKey] || [];
+
+  // Fetch and process data
+  useEffect(() => {
+    const fetchAppointments = async () => {
+
+      try {
+         const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found');
+          return;
+        }
+        const res = await api.get('/api/appointments/',{
+          headers: {
+              Authorization: `Token ${token}`,
+            },
+        });
+        const fetched = res.data.results;
+
+        const formatted = {};
+
+        fetched.forEach((appt) => {
+          const startDate = new Date(appt.scheduled_start_time);
+          const endDate = new Date(appt.scheduled_end_time);
+          const dateKey = startDate.toISOString().split('T')[0];
+
+          if (!formatted[dateKey]) formatted[dateKey] = [];
+
+          formatted[dateKey].push({
+            startHour: startDate.getUTCHours(),
+            endHour: endDate.getHours(),
+            title: `${appt.child_name} - ${appt.session_type}`,
+          });
+
+        });
+
+        setAppointmentsData(formatted);
+        console.log('Formatted appointments:', formatted);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
+
+  const appointments = appointmentsData[selectedDateKey] || [];
+
+console.log('Selected Date:', selectedDateKey);
+console.log('Appointments for selected date:', appointments);
 
   return (
     <View style={styles.container}>
@@ -118,18 +140,6 @@ const BookingInfo = () => {
                     <Text style={styles.cardTime}>
                       {appt.startHour}:00 - {appt.endHour}:00
                     </Text>
-                  </View>
-                  <View style={styles.avatars}>
-                    {appt.avatars.map((uri, idx) => (
-                      <Image
-                        key={idx}
-                        source={{ uri }}
-                        style={[
-                          styles.avatar,
-                          { marginLeft: idx === 0 ? 0 : -10 },
-                        ]}
-                      />
-                    ))}
                   </View>
                 </View>
               ) : (

@@ -87,7 +87,6 @@ const SubmitChildProfile = () => {
           const child = res.data.children[0];
           setForm(child);
           setChildId(child.id);
-          await AsyncStorage.setItem('child_id', child.id.toString());
           setMode('view');
         } else {
           setMode('create');

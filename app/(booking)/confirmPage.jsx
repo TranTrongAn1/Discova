@@ -1,6 +1,8 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import React from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams} from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../(auth)/api';
 const ConfirmPage = () => {
   const { data } = useLocalSearchParams();
   const bookingData = JSON.parse(data); // ✅ Real booking data passed from BookingPage
@@ -12,19 +14,15 @@ const ConfirmPage = () => {
         Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập.');
         return;
       }
-
+      console.log('Booking data:', bookingData); // ✅ Log booking data for debugging
       const response = await api.post(
-        '/api/appointments/booking/',
+        '/api/appointments/',
         {
           child: bookingData.childId,
           psychologist: bookingData.psychologistId,
           session_type: bookingData.session_type,
           start_slot_id: bookingData.start_slot_id,
           parent_notes: bookingData.parent_notes,
-          name: bookingData.name,
-          phone: bookingData.phone,
-          email: bookingData.email,
-          notify: bookingData.notify === 'Có',
         },
         {
           headers: {

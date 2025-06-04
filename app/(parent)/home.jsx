@@ -76,6 +76,34 @@ const upcomingAppointments = allAppointments
 const Home = () => {
   const [userName, setUserName] = useState(null); // default is null
   const [loading, setLoading] = useState(true);
+  const [nextAppointment, setNextAppointment] = useState(null);
+
+      useEffect(() => {
+        const fetchUpcomingAppointment = async () => {
+          try {
+            const token = await AsyncStorage.getItem('access_token');
+            if (!token) {
+              console.warn('No token found in storage.');
+              return;
+            }
+
+            const response = await api.get('api/appointments/upcoming/', {
+              headers: {
+                Authorization: `Token ${token}`
+              }
+            });
+
+            const upcoming = response.data.next_appointment;
+            setNextAppointment(upcoming);
+            console.log('Next appointment:', upcoming);
+          } catch (error) {
+            console.error('Failed to fetch upcoming appointment:', error);
+          }
+        };
+
+        fetchUpcomingAppointment();
+      }, []);
+
       useEffect(() => {
           const fetchUserName = async () => {
           try {
@@ -151,30 +179,26 @@ const Home = () => {
             ))}
           </View>
         </View>
-        
         <Text style={styles.text}>Lịch hẹn sắp tới của bạn</Text>
-        
-        {upcomingAppointments.length > 0 && (
-          <View style={styles.appointmentContainer}>
-            <View style={styles.card}>
-              <Text style={styles.cardText}>
-                <Text style={styles.bold}>Chuyên gia:</Text> {upcomingAppointments[0].expert}
-              </Text>
-              <Text style={styles.cardText}>
-                <Text style={styles.bold}>Dịch vụ:</Text> {upcomingAppointments[0].service}
-              </Text>
-              <Text style={styles.cardText}>
-                <Text style={styles.bold}>Thời gian:</Text> {upcomingAppointments[0].time} {formatDate(upcomingAppointments[0].date)}
-              </Text>
-              <Text style={styles.cardText}>
-                <Text style={styles.bold}>Thông tin người hẹn:</Text>
-              </Text>
-              <Text style={styles.cardText}>{upcomingAppointments[0].user.name}</Text>
-              <Text style={styles.cardText}>{upcomingAppointments[0].user.phone}</Text>
-              <Text style={styles.cardText}>{upcomingAppointments[0].user.email}</Text>
+
+          {nextAppointment ? (
+            <View style={styles.appointmentContainer}>
+              <View style={styles.card}>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Thời gian:</Text> {formatDate(nextAppointment.scheduled_start_time)}
+                </Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Người hẹn:</Text> {nextAppointment.child_name}
+                </Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Mã lịch hẹn:</Text> {nextAppointment.appointment_id}
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
+          ) : (
+            <Text style={[styles.cardText, { marginLeft: 20 }]}>Không có lịch hẹn sắp tới.</Text>
+          )}
+
       </View>
         <Text style={styles.text}>Các chuyên gia nổi bật</Text>
 

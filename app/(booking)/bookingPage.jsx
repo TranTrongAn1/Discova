@@ -65,12 +65,16 @@ const BookingPage = () => {
           fetchAvailableSlots();
         }, [mode]);
 
-        const toggleSlot = (day, time) => {
-          const key = `${day}-${time}`;
-          setSelectedSlots((prev) => ({
-            ...prev,
-            [key]: !prev[key],
-          }));
+        const toggleSlot = (slot) => {
+          setSelectedSlots((prev) => {
+            const newSelected = { ...prev };
+            if (newSelected[slot.slot_id]) {
+              delete newSelected[slot.slot_id];
+            } else {
+              newSelected[slot.slot_id] = slot;
+            }
+            return newSelected;
+          });
         };
 
       const handleSubmit = async () => {
@@ -79,24 +83,14 @@ const BookingPage = () => {
         return;
       }
 
-      let selectedSlotId = null;
-      let selectedSlotObj = null;
-
-      Object.entries(selectedSlots).forEach(([key, selected]) => {
-        if (selected && availableSlots) {
-          const [day, time] = key.split('-');
-          const match = availableSlots[day]?.find((slot) => slot.timeRange === time);
-          if (match) {
-            selectedSlotId = match.slot_id;
-            selectedSlotObj = match;
-          }
+      const selectedSlotIds = Object.keys(selectedSlots);
+        if (selectedSlotIds.length === 0) {
+          Alert.alert('Lỗi', 'Không tìm thấy khung giờ đã chọn.');
+          return;
         }
-      });
+        const selectedSlotId = selectedSlotIds[0];
+        const selectedSlotObj = selectedSlots[selectedSlotId];
 
-      if (!selectedSlotId) {
-        Alert.alert('Lỗi', 'Không tìm thấy khung giờ đã chọn.');
-        return;
-      }
 
       try {
         const storedChildId = await AsyncStorage.getItem('child_id');
@@ -106,7 +100,7 @@ const BookingPage = () => {
         }
 
         const bookingInfo = {
-          childId: parseInt(storedChildId), // ✅ convert to number if needed
+          childId: storedChildId, // ✅ convert to number if needed
           psychologistId: id,
           session_type: mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation',
           start_slot_id: selectedSlotId,
@@ -156,13 +150,16 @@ return (
                   const key = `${day}-${slot.timeRange}`;
                   const isSelected = selectedSlots[key];
                   return (
-                    <TouchableOpacity
-                      key={slot.slot_id}
-                      style={[styles.slot, isSelected && styles.slotSelected]}
-                      onPress={() => toggleSlot(day, slot.timeRange)}
-                    >
-                      <Text style={[styles.slotText, isSelected && { color: '#fff' }]}>{slot.timeRange}</Text>
-                    </TouchableOpacity>
+                  <TouchableOpacity
+                    key={slot.slot_id}
+                    style={[styles.slot, selectedSlots[slot.slot_id] && styles.slotSelected]}
+                    onPress={() => toggleSlot(slot)}
+                  >
+                    <Text style={[styles.slotText, selectedSlots[slot.slot_id] && { color: '#fff' }]}>
+                      {slot.timeRange}
+                    </Text>
+                  </TouchableOpacity>
+
                   );
                 })}
             </ScrollView>
