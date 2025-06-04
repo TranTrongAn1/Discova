@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://kmdiscova.id.vn/', // base path
+  baseURL: 'https://kmdiscova.id.vn/', // base path
 });
 
 export default api;

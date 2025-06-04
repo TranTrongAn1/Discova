@@ -34,7 +34,6 @@ const BookingPage = () => {
             console.warn('No token found');
             return;
           }
-
           const response = await api.get(
             `/api/appointments/slots/available_for_booking/?psychologist_id=${psychologistId}&session_type=${mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation'}&date_from=${dateFrom}&date_to=${dateTo}`,
             {
@@ -43,14 +42,12 @@ const BookingPage = () => {
               },
             }
           );
-
           const data = response.data;
 
           if (!data.available_slots || data.available_slots.length === 0) {
             setAvailableSlots(null); // <-- no slots available
             return;
           }
-
           const grouped = {};
           data.available_slots.forEach(slot => {
             const key = slot.date; 
@@ -58,16 +55,12 @@ const BookingPage = () => {
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push({ ...slot, timeRange });
           });
-
           setAvailableSlots(grouped);
         } catch (error) {
           console.error('Failed to fetch slots:', error);
           setAvailableSlots('error'); // <-- distinguish error
         }
       };
-
-
-
         useEffect(() => {
           fetchAvailableSlots();
         }, [mode]);

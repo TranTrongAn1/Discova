@@ -24,7 +24,7 @@ const handleLogin = async () => {
   }
 
   try {
-    const response = await axios.post('http://kmdiscova.id.vn/api/auth/login/', {
+    const response = await axios.post('https://kmdiscova.id.vn/api/auth/login/', {
       email,
       password,
     });
