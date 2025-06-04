@@ -49,9 +49,6 @@ const Profile = () => {
       <View style={styles.container}>
         <Text>{error || 'No profile data available. Please create a profile.'}</Text>
         <Button title="Create Profile" onPress={handleCreateProfile} color="#6c63ff" />
-        {error && (
-          <Button title="Try Again" onPress={fetchProfile} color="#6c63ff" />
-        )}
       </View>
     );
   }
