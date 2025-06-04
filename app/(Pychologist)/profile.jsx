@@ -28,7 +28,7 @@ const Profile = () => {
   }, []);
 
   const handleEditProfile = () => {
-    navigation.navigate('EditProfile');
+    navigation.navigate('EditProfile', { profile });
   };
 
   if (loading) {

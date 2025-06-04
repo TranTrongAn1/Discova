@@ -11,63 +11,46 @@ import {
   View,
 } from 'react-native';
 import { Platform } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import api from '../(auth)/api';
 
-const exampleData = {
-  first_name: 'Alice',
-  last_name: 'Nguyen',
-  profile_picture_url: 'https://example.com/images/alice.jpg',
-  license_number: 'PSY123456',
-  license_issuing_authority: 'Vietnamese Psychological Council',
-  license_expiry_date: '2027-12-31',
-  years_of_experience: 8,
-  biography: 'Alice Nguyen is a licensed clinical psychologist with a focus on cognitive behavioral therapy.',
-  education: [
-    { degree: 'B.A. in Psychology', institution: 'Hanoi University', year: '2010' },
-    { degree: 'M.S. in Clinical Psychology', institution: 'Melbourne University', year: '2013' },
-    { degree: 'Ph.D. in Psychology', institution: 'Stanford University', year: '2017' },
-  ],
-  certifications: [
-    { name: 'Certified CBT Practitioner', institution: 'CBT Institute', year: '2018' },
-    { name: 'Trauma-Focused Therapy Certification', institution: 'TFT Academy', year: '2019' },
-    { name: 'Mental Health First Aid Certified', institution: 'MHFA Org', year: '2020' },
-  ],
-  offers_initial_consultation: true,
-  offers_online_sessions: true,
-  office_address: '123 Nguyen Van Linh, District 7, HCMC',
-  website_url: 'https://www.alicenguyenpsychology.com',
-  linkedin_url: 'https://www.linkedin.com/in/alicenguyen',
-  hourly_rate: '120.00',
-  initial_consultation_rate: '80.00',
-};
-
 const EditProfile = () => {
+  const route = useRoute();
+  const profile = route.params?.profile || {}; // Get profile data from navigation params
+
+  // Initialize form state with profile data, providing defaults for missing fields
   const [form, setForm] = useState({
-    first_name: '',
-    last_name: '',
-    profile_picture_url: '',
-    license_number: '',
-    license_issuing_authority: '',
-    license_expiry_date: '2025-06-03',
-    years_of_experience: 0,
-    biography: '',
-    education: [
-      { degree: '', institution: '', year: '' },
-      { degree: '', institution: '', year: '' },
-      { degree: '', institution: '', year: '' },
-    ],
-    certifications: [
-      { name: '', institution: '', year: '' },
-      { name: '', institution: '', year: '' },
-      { name: '', institution: '', year: '' },
-    ],
-    offers_initial_consultation: true,
-    offers_online_sessions: true,
-    office_address: '',
-    website_url: '',
-    linkedin_url: '',
-    hourly_rate: '',
-    initial_consultation_rate: '',
+    first_name: profile.first_name || '',
+    last_name: profile.last_name || '',
+    profile_picture_url: profile.profile_picture_url || '',
+    license_number: profile.license_number || '',
+    license_issuing_authority: profile.license_issuing_authority || '',
+    license_expiry_date: profile.license_expiry_date || '2025-06-03',
+    years_of_experience: profile.years_of_experience || 0,
+    biography: profile.biography || '',
+    education: profile.education?.length
+      ? profile.education
+      : [
+          { degree: '', institution: '', year: '' },
+          { degree: '', institution: '', year: '' },
+          { degree: '', institution: '', year: '' },
+        ],
+    certifications: profile.certifications?.length
+      ? profile.certifications
+      : [
+          { name: '', institution: '', year: '' },
+          { name: '', institution: '', year: '' },
+          { name: '', institution: '', year: '' },
+        ],
+    offers_initial_consultation: profile.offers_initial_consultation ?? true,
+    offers_online_sessions: profile.offers_online_sessions ?? true,
+    office_address: profile.office_address || '',
+    website_url: profile.website_url || '',
+    linkedin_url: profile.linkedin_url || '',
+    hourly_rate: profile.hourly_rate ? String(profile.hourly_rate) : '',
+    initial_consultation_rate: profile.initial_consultation_rate
+      ? String(profile.initial_consultation_rate)
+      : '',
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -105,7 +88,33 @@ const EditProfile = () => {
   };
 
   const fillExampleData = () => {
-    setForm(exampleData);
+    setForm({
+      first_name: 'Alice',
+      last_name: 'Nguyen',
+      profile_picture_url: 'https://example.com/images/alice.jpg',
+      license_number: 'PSY123456',
+      license_issuing_authority: 'Vietnamese Psychological Council',
+      license_expiry_date: '2027-12-31',
+      years_of_experience: 8,
+      biography: 'Alice Nguyen is a licensed clinical psychologist with a focus on cognitive behavioral therapy.',
+      education: [
+        { degree: 'B.A. in Psychology', institution: 'Hanoi University', year: '2010' },
+        { degree: 'M.S. in Clinical Psychology', institution: 'Melbourne University', year: '2013' },
+        { degree: 'Ph.D. in Psychology', institution: 'Stanford University', year: '2017' },
+      ],
+      certifications: [
+        { name: 'Certified CBT Practitioner', institution: 'CBT Institute', year: '2018' },
+        { name: 'Trauma-Focused Therapy Certification', institution: 'TFT Academy', year: '2019' },
+        { name: 'Mental Health First Aid Certified', institution: 'MHFA Org', year: '2020' },
+      ],
+      offers_initial_consultation: true,
+      offers_online_sessions: true,
+      office_address: '123 Nguyen Van Linh, District 7, HCMC',
+      website_url: 'https://www.alicenguyenpsychology.com',
+      linkedin_url: 'https://www.linkedin.com/in/alicenguyen',
+      hourly_rate: '120.00',
+      initial_consultation_rate: '80.00',
+    });
   };
 
   const handleUpdate = async () => {
@@ -158,7 +167,6 @@ const EditProfile = () => {
       hourly_rate: hourlyRate,
       initial_consultation_rate: initialConsultationRate,
       years_of_experience: parseInt(form.years_of_experience) || 0,
-      // Filter out empty education/certification entries
       education: form.education.filter(
         (edu) => edu.degree || edu.institution || edu.year
       ),
@@ -169,11 +177,11 @@ const EditProfile = () => {
 
     try {
       await api.patch('/api/psychologists/profile/update_profile', payload);
-      Alert.alert('Success', 'Profile created successfully!');
+      Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || 'Could not create profile.';
+      const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || 'Could not update profile.';
       Alert.alert('Error', errorMessage);
-      console.error('Create failed', error);
+      console.error('Update failed', error);
     }
   };
 
