@@ -173,15 +173,26 @@ const EditProfile = () => {
       certifications: form.certifications.filter(
         (cert) => cert.name || cert.institution || cert.year
       ),
+      services_offered: form.services_offered || [], // Added for potential backend requirement
     };
 
     try {
-      await api.patch('/api/psychologists/profile/update_profile', payload);
-      Alert.alert('Success', 'Profile updated successfully!');
+      // Check if profile is new (empty or no profile data)
+      const isNewProfile = !route.params?.profile || Object.keys(route.params.profile).length === 0;
+      // TODO: Replace with your actual create endpoint
+      const endpoint = isNewProfile
+        ? '/api/psychologists/profile/' // Fallback create endpoint
+        : '/api/psychologists/profile/update_profile';
+      const method = isNewProfile ? api.post : api.patch;
+
+      console.log('API Request:', { endpoint, method: isNewProfile ? 'POST' : 'PATCH', payload });
+
+      await method(endpoint, payload);
+      Alert.alert('Success', `Profile ${isNewProfile ? 'created' : 'updated'} successfully!`);
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || 'Could not update profile.';
+      const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || `Could not ${isNewProfile ? 'create' : 'update'} profile.`;
+      console.error('API Error:', error.response || error);
       Alert.alert('Error', errorMessage);
-      console.error('Update failed', error);
     }
   };
 

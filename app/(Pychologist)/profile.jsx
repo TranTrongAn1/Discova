@@ -9,26 +9,31 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get('/api/psychologists/profile/profile/');
-        setProfile(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to fetch profile data. Please try again.');
-        setLoading(false);
-        Alert.alert('Error', err.response?.data?.detail || 'Could not fetch profile data.');
-        console.error('Profile fetch failed', err);
-      }
-    };
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null); // Clear previous errors
+      const response = await api.get('/api/psychologists/profile/profile/');
+      setProfile(response.data);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to fetch profile data. Please try again.');
+      setLoading(false);
+      Alert.alert('Error', err.response?.data?.detail || 'Could not fetch profile data.');
+      console.error('Profile fetch failed', err);
+    }
+  };
 
+  useEffect(() => {
     fetchProfile();
   }, []);
 
   const handleEditProfile = () => {
     navigation.navigate('EditProfile', { profile });
+  };
+
+  const handleCreateProfile = () => {
+    navigation.navigate('EditProfile', { profile: {} });
   };
 
   if (loading) {
@@ -42,8 +47,11 @@ const Profile = () => {
   if (error || !profile) {
     return (
       <View style={styles.container}>
-        <Text>{error || 'No profile data available.'}</Text>
-        <Button title="Try Again" onPress={() => fetchProfile()} />
+        <Text>{error || 'No profile data available. Please create a profile.'}</Text>
+        <Button title="Create Profile" onPress={handleCreateProfile} color="#6c63ff" />
+        {error && (
+          <Button title="Try Again" onPress={fetchProfile} color="#6c63ff" />
+        )}
       </View>
     );
   }
@@ -186,46 +194,57 @@ export default Profile;
 const styles = StyleSheet.create({
   container: {
     padding: 20,
+    backgroundColor: '#fafafa',
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: '#6c63ff',
   },
   name: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
   },
   title: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#6c63ff',
-    marginBottom: 20,
+    marginBottom: 24,
+    textAlign: 'center',
   },
   section: {
-    alignSelf: 'stretch',
-    marginBottom: 20,
-    backgroundColor: '#f4f4f4',
-    padding: 12,
-    borderRadius: 8,
+    width: '100%',
+    backgroundColor: '#fff',
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionTitle: {
+    fontSize: 17,
     fontWeight: '600',
-    fontSize: 16,
-    marginBottom: 6,
-    color: '#444',
+    marginBottom: 8,
+    color: '#333',
   },
   text: {
     fontSize: 14,
     color: '#555',
-    lineHeight: 20,
+    lineHeight: 22,
+    marginBottom: 4,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     marginTop: 20,
     width: '100%',
   },
