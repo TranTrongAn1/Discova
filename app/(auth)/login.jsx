@@ -1,129 +1,135 @@
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Dimensions, TouchableWithoutFeedback, KeyboardAvoidingView, ScrollView, Platform, Keyboard } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TextInput,
+  Dimensions,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import React, { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import api from '../(auth)/api';
-  import Toast from 'react-native-toast-message';
+import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../(auth)/api';
 
- const { width: SCREEN_WIDTH } = Dimensions.get('window'); 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please enter both email and password',
+      });
+      return;
+    }
 
+    try {
+      const response = await api.post('/api/auth/login/', {
+        email,
+        password,
+      });
 
-const handleLogin = async () => {
-  if (!email || !password) {
-    Toast.show({
-      type: 'error',
-      text1: 'Missing Fields',
-      text2: 'Please enter both email and password',
-    });
-    return;
-  }
+      const { token, user } = response.data;
 
-  try {
-    const response = await api.post('/api/auth/login/', {
-      email,
-      password,
-    });
+      // Save token and user info to AsyncStorage
+      await AsyncStorage.setItem('access_token', token);
+      await AsyncStorage.setItem('user_type', user.user_type);
+      await AsyncStorage.setItem('user_id', user.id.toString());
 
-    const { token, user } = response.data;
+      console.log('Login successful:', response.data);
 
-    // Save token and user info to AsyncStorage
-    await AsyncStorage.setItem('access_token', token);
-    await AsyncStorage.setItem('user_type', user.user_type);
-    await AsyncStorage.setItem('user_id', user.id.toString()); // optional
+      Toast.show({
+        type: 'success',
+        text1: 'Login Successful',
+        text2: 'Redirecting you...',
+      });
 
-    console.log('Login successful:', response.data);
-
-    Toast.show({
-      type: 'success',
-      text1: 'Login Successful',
-      text2: 'Redirecting you...',
-    });
-
-    // Navigate to welcome screen
-    router.push('/welcome');
-
-  } catch (error) {
-    console.log('Login error:', error.response?.data || error.message);
-    Toast.show({
-      type: 'error',
-      text1: 'Login Failed',
-      text2: error.response?.data?.message || 'Invalid credentials',
-    });
-  }
-};
-
+      router.push('/welcome');
+    } catch (error) {
+      console.log('Login error:', error.response?.data || error.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Login Failed',
+        text2: error.response?.data?.message || 'Invalid credentials',
+      });
+    }
+  };
 
   return (
-  <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    
-  {/* lifts content when keyboard shows */}
-  <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    style={{ flex: 1 }}
-  >
-    {/* scroll if still taller than screen */}
-    <ScrollView
-      contentContainerStyle={{ flexGrow: 1 }}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
     >
-    <View style={styles.container}>
-      <Toast position="top" visibilityTime={4000} topOffset={50}  />
-      <TouchableOpacity style={styles.backButton} onPress={router.back}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-      </TouchableOpacity>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.container}>
+          <Toast position="top" visibilityTime={4000} topOffset={50} />
+          <TouchableOpacity style={styles.backButton} onPress={router.back}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
 
-      <Text style={styles.Welcome}>CHÀO MỪNG TRỞ LẠI!</Text>
+          <Text style={styles.Welcome}>CHÀO MỪNG TRỞ LẠI!</Text>
 
-      <Text style={styles.Welcome}>Facebook</Text>
-      <Text style={styles.Welcome}>Google</Text>
+          <Text style={styles.Welcome}>Facebook</Text>
+          <Text style={styles.Welcome}>Google</Text>
 
-      <Text style={styles.Text}>HOẶC ĐĂNG NHẬP BẰNG EMAIL</Text>
+          <Text style={styles.Text}>HOẶC ĐĂNG NHẬP BẰNG EMAIL</Text>
 
-      {/* Địa chỉ email input */}
-      <TextInput
-        style={styles.input}
-        placeholder="Địa chỉ email"
-        placeholderTextColor="#A1A4B2"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
+          {/* Email input */}
+          <TextInput
+            style={styles.input}
+            placeholder="Địa chỉ email"
+            placeholderTextColor="#A1A4B2"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={email}
+            onChangeText={setEmail}
+          />
 
-      {/* Mật khẩu input */}
-      <TextInput
-        style={styles.input}
-        placeholder="Mật khẩu"
-        placeholderTextColor="#A1A4B2"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+          {/* Password input */}
+          <TextInput
+            style={styles.input}
+            placeholder="Mật khẩu"
+            placeholderTextColor="#A1A4B2"
+            secureTextEntry={true}
+            value={password}
+            onChangeText={setPassword}
+          />
 
-      <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => {handleLogin()}}>
-        <Text style={styles.buttonText}>ĐĂNG NHẬP</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.Button}
+            activeOpacity={0.8}
+            onPress={handleLogin}
+          >
+            <Text style={styles.buttonText}>ĐĂNG NHẬP</Text>
+          </TouchableOpacity>
 
-      <Text style={styles.Text3}> Quên mật khẩu ?</Text>
+          <Text style={styles.Text3}>Quên mật khẩu?</Text>
 
-      <View style={styles.RegisterContainer}>
-                <Text style={styles.Text}> CHƯA CÓ TÀI KHOẢN? </Text>
-                <TouchableOpacity onPress={() => router.push('/register')}>
-                  <Text style={styles.registerLink}>ĐĂNG KÝ</Text>
-                </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={() => router.push('/welcome')}>
-                  <Text style={styles.registerLink}>Welcome Test</Text>
-                </TouchableOpacity>
-    </View>
+          <View style={styles.RegisterContainer}>
+            <Text style={styles.Text}>CHƯA CÓ TÀI KHOẢN?</Text>
+            <TouchableOpacity onPress={() => router.push('/register')}>
+              <Text style={styles.registerLink}>ĐĂNG KÝ</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={() => router.push('/welcome')}>
+            <Text style={styles.registerLink}>Welcome Test</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-  </KeyboardAvoidingView>
-</TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -182,28 +188,28 @@ const styles = StyleSheet.create({
     paddingVertical: 25,
     paddingHorizontal: 20,
     marginTop: 20,
-    width: SCREEN_WIDTH - 70, // Adjust width as needed
+    width: SCREEN_WIDTH - 70,
     alignSelf: 'center',
   },
-      buttonText: {
+  buttonText: {
     color: '#fff',
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize: 16,
   },
-   Text3: {
+  Text3: {
     marginTop: 20,
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
   },
-   RegisterContainer: {
-    marginTop: 70,  
-  flexDirection: 'row',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-    registerLink: {
+  RegisterContainer: {
+    marginTop: 70,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  registerLink: {
     color: '#8E97FD',
     fontWeight: 'bold',
   },
