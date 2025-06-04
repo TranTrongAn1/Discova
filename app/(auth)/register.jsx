@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
+import api from '../(auth)/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -185,7 +186,7 @@ const Register = () => {
             };
 
             try {
-              const { data } = await axios.post('http://kmdiscova.id.vn/auth/register/', payload);
+              const { data } = await api.post('api/auth/register/', payload);
 
               Toast.show({
                 type: 'success',

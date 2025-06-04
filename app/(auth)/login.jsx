@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import api from '../(auth)/api';
   import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -24,7 +25,7 @@ const handleLogin = async () => {
   }
 
   try {
-    const response = await axios.post('http://kmdiscova.id.vn/api/auth/login/', {
+    const response = await api.post('/api/auth/login/', {
       email,
       password,
     });
