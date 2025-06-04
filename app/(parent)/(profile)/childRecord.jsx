@@ -73,21 +73,21 @@ const SubmitChildProfile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-         const token = await AsyncStorage.getItem('access_token');
-         const userId = await AsyncStorage.getItem('user_id');
+        const token = await AsyncStorage.getItem('access_token');
         if (!token) {
           console.warn('No token found');
           return;
         }
-        const res = await api.get(`/api/children/profile/${userId}`, {
-                    headers: {
-              Authorization: `Token ${token}`,
-            },
-      });
-        if (res.data.length > 0) {
-          const child = res.data[0];
+        const res = await api.get(`/api/children/profile/my_children/`, {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        });
+        if (res.data.count > 0 && res.data.children.length > 0) {
+          const child = res.data.children[0];
           setForm(child);
           setChildId(child.id);
+          await AsyncStorage.setItem('child_id', child.id.toString());
           setMode('view');
         } else {
           setMode('create');
@@ -99,6 +99,7 @@ const SubmitChildProfile = () => {
     };
     fetchProfile();
   }, []);
+
 
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value });
@@ -136,40 +137,36 @@ const SubmitChildProfile = () => {
         }
       };
 
-  const renderField = (label, key, isNumeric = false, isBool = false) => {
-    if (mode === 'view') {
-      return (
-        <View style={styles.readOnlyField}>
-          <Text style={styles.label}>{label}</Text>
-          <Text style={styles.value}>{form[key]?.toString() || '—'}</Text>
-        </View>
-      );
-    }
-    return (
-      <>
-        <Text style={styles.label}>{label}</Text>
-        <TextInput
-          style={styles.input}
-          value={form[key]?.toString()}
-          onChangeText={(text) => {
-            if (key === 'date_of_birth') {
-              const digits = text.replace(/\D/g, '');
-              if (digits.length === 8) {
-                const formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
-                handleChange(key, formatted);
-              } else {
-                handleChange(key, text);
-              }
-            } else {
-              handleChange(key, isBool ? text === 'true' : isNumeric ? Number(text) : text);
-            }
-          }}
+        const renderField = (label, key, isNumeric = false, isBool = false) => {
+        let displayLabel = label;
+        if (key === 'date_of_birth') {
+          displayLabel += ' (YYYY-MM-DD)';  // Add format hint to label
+        }
+        if (mode === 'view') {
+          return (
+            <View style={styles.readOnlyField}>
+              <Text style={styles.label}>{displayLabel}</Text>
+              <Text style={styles.value}>{form[key]?.toString() || '—'}</Text>
+            </View>
+          );
+        }
+        return (
+          <>
+            <Text style={styles.label}>{displayLabel}</Text>
+            <TextInput
+              style={styles.input}
+              value={form[key]?.toString()}
+              onChangeText={(text) => {
+                // Remove special formatting for date_of_birth
+                handleChange(key, isBool ? text === 'true' : isNumeric ? Number(text) : text);
+              }}
+              keyboardType={isNumeric ? 'numeric' : 'default'}
+              placeholder={key === 'date_of_birth' ? 'YYYY-MM-DD' : ''}
+            />
+          </>
+        );
+      };
 
-          keyboardType={isNumeric ? 'numeric' : 'default'}
-        />
-      </>
-    );
-  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -274,7 +271,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   buttonOutline: {
-    
+    marginTop: 20,
     borderColor: '#5DB075',
     borderWidth: 1,
     padding: 15,

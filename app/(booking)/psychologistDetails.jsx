@@ -19,7 +19,7 @@ useEffect(() => {
           console.warn('No token found');
           return;
         }
-        const res = await axios.get(`http://kmdiscova.id.vn/api/psychologists/marketplace/${id}/`,{
+        const res = await axios.get(`https://kmdiscova.id.vn/api/psychologists/marketplace/${id}/`,{
           headers: {
               Authorization: `Token ${token}`,
             },});

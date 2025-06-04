@@ -73,21 +73,63 @@ const BookingPage = () => {
           }));
         };
 
-      const handleSubmit = () => {
-        if (!name || !phone || !email || Object.values(selectedSlots).every((v) => !v)) {
-          Alert.alert('Thông báo', 'Vui lòng điền đầy đủ thông tin và chọn ít nhất một khung giờ.');
+      const handleSubmit = async () => {
+      if (!name || !phone || !email || Object.values(selectedSlots).every((v) => !v)) {
+        Alert.alert('Thông báo', 'Vui lòng điền đầy đủ thông tin và chọn ít nhất một khung giờ.');
+        return;
+      }
+
+      let selectedSlotId = null;
+      let selectedSlotObj = null;
+
+      Object.entries(selectedSlots).forEach(([key, selected]) => {
+        if (selected && availableSlots) {
+          const [day, time] = key.split('-');
+          const match = availableSlots[day]?.find((slot) => slot.timeRange === time);
+          if (match) {
+            selectedSlotId = match.slot_id;
+            selectedSlotObj = match;
+          }
+        }
+      });
+
+      if (!selectedSlotId) {
+        Alert.alert('Lỗi', 'Không tìm thấy khung giờ đã chọn.');
+        return;
+      }
+
+      try {
+        const storedChildId = await AsyncStorage.getItem('child_id');
+        if (!storedChildId) {
+          Alert.alert('Lỗi', 'Không tìm thấy thông tin trẻ.');
           return;
         }
 
-        Alert.alert(
-          'Xác nhận đặt lịch',
-          'Bạn sẽ được chuyển đến trang thanh toán.',
-          [
-            { text: 'Hủy', style: 'cancel' },
-            { text: 'Đồng ý', onPress: () => router.push('/confirmPage') },
-          ]
-        );
-      };
+        const bookingInfo = {
+          childId: parseInt(storedChildId), // ✅ convert to number if needed
+          psychologistId: id,
+          session_type: mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation',
+          start_slot_id: selectedSlotId,
+          parent_notes: specialRequest,
+          name,
+          phone,
+          email,
+          notify,
+          slotDetails: selectedSlotObj,
+        };
+
+        // ✅ Navigate to confirmPage with bookingInfo
+        router.push({
+          pathname: '/confirmPage',
+          params: { data: JSON.stringify(bookingInfo) },
+        });
+      } catch (err) {
+        console.error('Error reading child_id from AsyncStorage:', err);
+        Alert.alert('Lỗi', 'Đã xảy ra lỗi khi lấy thông tin trẻ.');
+      }
+};
+
+
 return (
   <ScrollView style={styles.container}>
     <Text style={styles.title}>Bạn muốn tư vấn vào khung giờ nào?</Text>

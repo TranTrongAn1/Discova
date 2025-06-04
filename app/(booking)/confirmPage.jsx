@@ -1,67 +1,93 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import React from 'react';
 import { router } from 'expo-router';
-const bookingData = {
-  expertName: 'ThS. Trần Thị Thu Vân',
-  service: 'Tư vấn online',
-  time: '5:00PM Thứ 4, 30/3/2025',
-  customer: {
-    name: 'Nguyễn Thị Mai',
-    phone: '0375377310',
-    email: 'mainguyen123@gmail.com',
-  },
-  note: 'Không có',
-  pricePerHour: '799.000đ',
-  totalPrice: '799.000đ',
-};
 const ConfirmPage = () => {
+  const { data } = useLocalSearchParams();
+  const bookingData = JSON.parse(data); // ✅ Real booking data passed from BookingPage
+
+  const handleConfirmBooking = async () => {
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập.');
+        return;
+      }
+
+      const response = await api.post(
+        '/api/appointments/booking/',
+        {
+          child: bookingData.childId,
+          psychologist: bookingData.psychologistId,
+          session_type: bookingData.session_type,
+          start_slot_id: bookingData.start_slot_id,
+          parent_notes: bookingData.parent_notes,
+          name: bookingData.name,
+          phone: bookingData.phone,
+          email: bookingData.email,
+          notify: bookingData.notify === 'Có',
+        },
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        }
+      );
+
+      // You can pass response.data if needed to receipt page
+      router.push('/receipt');
+    } catch (error) {
+      console.error('Booking failed:', error);
+      Alert.alert('Lỗi', 'Không thể đặt lịch. Vui lòng thử lại sau.');
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Xác nhận thông tin lịch hẹn</Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}>
-          <Text style={styles.bold}>Chuyên gia: </Text>{bookingData.expertName}
-        </Text>
-        <Text style={styles.label}>
-          <Text style={styles.bold}>Dịch vụ: </Text>{bookingData.service}
-        </Text>
-        <Text style={styles.label}>
-          <Text style={styles.bold}>Thời gian: </Text>{bookingData.time}
-        </Text>
+        <Text style={styles.label}><Text style={styles.bold}>Chuyên gia: </Text>{bookingData.slotDetails?.psychologist_name || 'N/A'}</Text>
+        <Text style={styles.label}><Text style={styles.bold}>Dịch vụ: </Text>{bookingData.session_type === 'OnlineMeeting' ? 'Tư vấn online' : 'Tư vấn trực tiếp'}</Text>
+        <Text style={styles.label}><Text style={styles.bold}>Thời gian: </Text>{bookingData.slotDetails?.timeRange} ngày {bookingData.slotDetails?.date}</Text>
         <Text style={styles.label}><Text style={styles.bold}>Thông tin người hẹn:</Text></Text>
-        <Text style={styles.subLabel}>{bookingData.customer.name}</Text>
-        <Text style={styles.subLabel}>{bookingData.customer.phone}</Text>
-        <Text style={styles.subLabel}>{bookingData.customer.email}</Text>
+        <Text style={styles.subLabel}>{bookingData.name}</Text>
+        <Text style={styles.subLabel}>{bookingData.phone}</Text>
+        <Text style={styles.subLabel}>{bookingData.email}</Text>
       </View>
 
       <View style={styles.divider} />
 
       <View style={styles.notes}>
         <Text style={styles.bold}>Ghi chú của người hẹn</Text>
-        <Text style={styles.noteText}>{bookingData.note}</Text>
+        <Text style={styles.noteText}>{bookingData.parent_notes || 'Không có'}</Text>
       </View>
 
       <View style={styles.divider} />
 
       <View style={styles.pricing}>
         <Text style={styles.bold}>Phí dịch vụ</Text>
-        <Text style={styles.bold}>{bookingData.pricePerHour}/1 tiếng</Text>
+        <Text style={styles.bold}>
+          {bookingData.session_type === 'OnlineMeeting' ? '599.000đ' : '799.000đ'}/1 tiếng
+        </Text>
       </View>
       <View style={styles.pricing}>
         <Text style={styles.bold}>Thành tiền</Text>
-        <Text style={styles.bold}>{bookingData.totalPrice}</Text>
+        <Text style={styles.bold}>
+          {bookingData.session_type === 'OnlineMeeting' ? '599.000đ' : '799.000đ'}
+        </Text>
       </View>
 
-      <TouchableOpacity style={styles.confirmButton} onPress={()=> router.push('/receipt')}>
+      <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmBooking}>
         <Text style={styles.confirmText}>XÁC NHẬN & THANH TOÁN</Text>
       </TouchableOpacity>
+
       <TouchableOpacity style={styles.backButton} onPress={router.back}>
         <Text style={styles.backText}>QUAY LẠI</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 };
+
 
 export default ConfirmPage;
 
