@@ -1,24 +1,28 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
-  Button,
+  Animated,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   TextInput,
-  View,
+  View
 } from 'react-native';
-import { Platform } from 'react-native';
-import { useRoute } from '@react-navigation/native';
 import api from '../(auth)/api';
 
 const EditProfile = () => {
+  const navigation = useNavigation();
   const route = useRoute();
-  const profile = route.params?.profile || {}; // Get profile data from navigation params
+  const router = useRouter();
+  const profile = route.params?.profile || {};
 
-  // Initialize form state with profile data, providing defaults for missing fields
   const [form, setForm] = useState({
     first_name: profile.first_name || '',
     last_name: profile.last_name || '',
@@ -54,6 +58,7 @@ const EditProfile = () => {
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [animatedValue] = useState(new Animated.Value(1));
 
   const parseDate = (dateStr) => {
     const parts = dateStr.split('-');
@@ -87,350 +92,520 @@ const EditProfile = () => {
     });
   };
 
-  const fillExampleData = () => {
-    setForm({
-      first_name: 'Alice',
-      last_name: 'Nguyen',
-      profile_picture_url: 'https://example.com/images/alice.jpg',
-      license_number: 'PSY123456',
-      license_issuing_authority: 'Vietnamese Psychological Council',
-      license_expiry_date: '2027-12-31',
-      years_of_experience: 8,
-      biography: 'Alice Nguyen is a licensed clinical psychologist with a focus on cognitive behavioral therapy.',
-      education: [
-        { degree: 'B.A. in Psychology', institution: 'Hanoi University', year: '2010' },
-        { degree: 'M.S. in Clinical Psychology', institution: 'Melbourne University', year: '2013' },
-        { degree: 'Ph.D. in Psychology', institution: 'Stanford University', year: '2017' },
-      ],
-      certifications: [
-        { name: 'Certified CBT Practitioner', institution: 'CBT Institute', year: '2018' },
-        { name: 'Trauma-Focused Therapy Certification', institution: 'TFT Academy', year: '2019' },
-        { name: 'Mental Health First Aid Certified', institution: 'MHFA Org', year: '2020' },
-      ],
-      offers_initial_consultation: true,
-      offers_online_sessions: true,
-      office_address: '123 Nguyen Van Linh, District 7, HCMC',
-      website_url: 'https://www.alicenguyenpsychology.com',
-      linkedin_url: 'https://www.linkedin.com/in/alicenguyen',
-      hourly_rate: '120.00',
-      initial_consultation_rate: '80.00',
-    });
+
+ const handleUpdate = async () => {
+  if (
+    !form.first_name ||
+    !form.last_name ||
+    !form.license_number ||
+    !form.license_issuing_authority ||
+    !form.license_expiry_date ||
+    form.years_of_experience === '' ||
+    form.years_of_experience < 0
+  ) {
+    Alert.alert(
+      'Validation Error',
+      'All required fields must be filled.',
+    );
+    navigation.navigate('profile');
+    return;
+  }
+
+
+  const isValidUrl = (url) => {
+    if (!url) return true;
+    const urlPattern = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
+    return urlPattern.test(url);
   };
 
-  const handleUpdate = async () => {
-    // Validate required fields
-    if (
-      !form.first_name ||
-      !form.last_name ||
-      !form.license_number ||
-      !form.license_issuing_authority ||
-      !form.license_expiry_date ||
-      form.years_of_experience === '' ||
-      form.years_of_experience < 0
-    ) {
-      Alert.alert('Validation Error', 'All required fields must be filled.');
-      return;
-    }
+  if (
+    (form.profile_picture_url && !isValidUrl(form.profile_picture_url)) ||
+    (form.website_url && !isValidUrl(form.website_url)) ||
+    (form.linkedin_url && !isValidUrl(form.linkedin_url))
+  ) {
+    Alert.alert('Validation Error', 'URLs must be valid (e.g., start with http:// or https://).');
+    return;
+  }
 
-    // Validate URLs
-    const isValidUrl = (url) => {
-      if (!url) return true; // Optional fields
-      const urlPattern = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
-      return urlPattern.test(url);
+  const hourlyRate = form.hourly_rate
+    ? parseFloat(form.hourly_rate).toFixed(2)
+    : '';
+  const initialConsultationRate = form.initial_consultation_rate
+    ? parseFloat(form.initial_consultation_rate).toFixed(2)
+    : '';
+
+  if (!hourlyRate || !initialConsultationRate || isNaN(hourlyRate) || isNaN(initialConsultationRate)) {
+    Alert.alert('Validation Error', 'Hourly Rate and Initial Consultation Rate must be valid numbers.');
+    return;
+  }
+
+  const payload = {
+    ...form,
+    hourly_rate: hourlyRate,
+    initial_consultation_rate: initialConsultationRate,
+    years_of_experience: parseInt(form.years_of_experience) || 0,
+    education: form.education.filter(
+      (edu) => edu.degree || edu.institution || edu.year
+    ),
+    certifications: form.certifications.filter(
+      (cert) => cert.name || cert.institution || cert.year
+    ),
+    services_offered: form.services_offered || [],
+  };
+
+  try {
+    const isNewProfile = !route.params?.profile || Object.keys(route.params.profile).length === 0;
+    const endpoint = isNewProfile
+      ? '/api/psychologists/profile/'
+      : '/api/psychologists/profile/update_profile';
+    const method = isNewProfile ? api.post : api.patch;
+
+    await method(endpoint, payload);
+    Alert.alert('Success', `Profile ${isNewProfile ? 'created' : 'updated'} successfully!`);
+  } catch (error) {
+    const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || `Could not ${isNewProfile ? 'create' : 'update'} profile.`;
+    Alert.alert('Error', errorMessage);
+  }
+};
+
+  const animatePressIn = () => {
+    Animated.spring(animatedValue, {
+      toValue: 0.95,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const animatePressOut = () => {
+    Animated.spring(animatedValue, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const AnimatedTextInput = ({ style, ...props }) => {
+    const [scale] = useState(new Animated.Value(1));
+
+    const handleFocus = () => {
+      Animated.spring(scale, {
+        toValue: 1.02,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
     };
 
-    if (
-      (form.profile_picture_url && !isValidUrl(form.profile_picture_url)) ||
-      (form.website_url && !isValidUrl(form.website_url)) ||
-      (form.linkedin_url && !isValidUrl(form.linkedin_url))
-    ) {
-      Alert.alert('Validation Error', 'URLs must be valid (e.g., start with http:// or https://).');
-      return;
-    }
-
-    // Validate rates
-    const hourlyRate = form.hourly_rate
-      ? parseFloat(form.hourly_rate).toFixed(2)
-      : '';
-    const initialConsultationRate = form.initial_consultation_rate
-      ? parseFloat(form.initial_consultation_rate).toFixed(2)
-      : '';
-
-    if (!hourlyRate || !initialConsultationRate || isNaN(hourlyRate) || isNaN(initialConsultationRate)) {
-      Alert.alert('Validation Error', 'Hourly Rate and Initial Consultation Rate must be valid numbers.');
-      return;
-    }
-
-    // Prepare payload
-    const payload = {
-      ...form,
-      hourly_rate: hourlyRate,
-      initial_consultation_rate: initialConsultationRate,
-      years_of_experience: parseInt(form.years_of_experience) || 0,
-      education: form.education.filter(
-        (edu) => edu.degree || edu.institution || edu.year
-      ),
-      certifications: form.certifications.filter(
-        (cert) => cert.name || cert.institution || cert.year
-      ),
-      services_offered: form.services_offered || [], // Added for potential backend requirement
+    const handleBlur = () => {
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
     };
 
-    try {
-      // Check if profile is new (empty or no profile data)
-      const isNewProfile = !route.params?.profile || Object.keys(route.params.profile).length === 0;
-      // TODO: Replace with your actual create endpoint
-      const endpoint = isNewProfile
-        ? '/api/psychologists/profile/' // Fallback create endpoint
-        : '/api/psychologists/profile/update_profile';
-      const method = isNewProfile ? api.post : api.patch;
-
-      console.log('API Request:', { endpoint, method: isNewProfile ? 'POST' : 'PATCH', payload });
-
-      await method(endpoint, payload);
-      Alert.alert('Success', `Profile ${isNewProfile ? 'created' : 'updated'} successfully!`);
-    } catch (error) {
-      const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || `Could not ${isNewProfile ? 'create' : 'update'} profile.`;
-      console.error('API Error:', error.response || error);
-      Alert.alert('Error', errorMessage);
-    }
+    return (
+      <Animated.View style={{ transform: [{ scale }], width: '100%' }}>
+        <TextInput
+          style={[style, styles.input]}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholderTextColor="#999"
+          {...props}
+        />
+      </Animated.View>
+    );
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Personal Information</Text>
+    <LinearGradient
+      colors={['#6c63ff', '#8e8dfa', '#b0b7ff']}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Edit Your Professional Profile</Text>
+          <Text style={styles.subtitle}>Craft a profile that reflects your expertise</Text>
+        </View>
 
-      <Button title="Fill with Example Data" onPress={fillExampleData} />
-
-      <TextInput
-        placeholder="First Name *"
-        style={styles.input}
-        value={form.first_name}
-        onChangeText={(text) => handleChange('first_name', text)}
-      />
-      <TextInput
-        placeholder="Last Name *"
-        style={styles.input}
-        value={form.last_name}
-        onChangeText={(text) => handleChange('last_name', text)}
-      />
-      <TextInput
-        placeholder="Profile Picture URL"
-        style={styles.input}
-        value={form.profile_picture_url}
-        onChangeText={(text) => handleChange('profile_picture_url', text)}
-      />
-      <TextInput
-        placeholder="Biography"
-        style={[styles.input, styles.textArea]}
-        multiline
-        numberOfLines={4}
-        value={form.biography}
-        onChangeText={(text) => handleChange('biography', text)}
-      />
-
-      <Text style={styles.header}>License</Text>
-      <TextInput
-        placeholder="License Number *"
-        style={styles.input}
-        value={form.license_number}
-        onChangeText={(text) => handleChange('license_number', text)}
-      />
-      <TextInput
-        placeholder="Issuing Authority *"
-        style={styles.input}
-        value={form.license_issuing_authority}
-        onChangeText={(text) => handleChange('license_issuing_authority', text)}
-      />
-      <Text>License Expiry Date *</Text>
-      <Button
-        title={form.license_expiry_date || 'Select Date'}
-        onPress={() => setShowDatePicker(true)}
-      />
-      {showDatePicker && (
-        <DateTimePicker
-          value={parseDate(form.license_expiry_date)}
-          mode="date"
-          display="default"
-          onChange={onChangeDate}
-          minimumDate={new Date()}
-          maximumDate={new Date(2100, 11, 31)}
-        />
-      )}
-      <TextInput
-        placeholder="Years of Experience *"
-        style={styles.input}
-        keyboardType="numeric"
-        value={String(form.years_of_experience)}
-        onChangeText={(text) =>
-          handleChange('years_of_experience', parseInt(text) || 0)
-        }
-      />
-
-      <Text style={styles.header}>Education</Text>
-      {form.education.map((edu, index) => (
-        <View key={index} style={styles.nestedContainer}>
-          <TextInput
-            placeholder={`Degree ${index + 1}`}
-            style={styles.input}
-            value={edu.degree}
-            onChangeText={(text) =>
-              handleNestedChange('education', index, 'degree', text)
-            }
+        <View style={styles.section}>
+          <Text style={styles.header}>Personal Information</Text>
+          <View style={styles.divider} />
+          <AnimatedTextInput
+            placeholder="First Name *"
+            value={form.first_name.trim()}
+            onChangeText={(text) => handleChange('first_name', text)}
           />
-          <TextInput
-            placeholder={`Institution ${index + 1}`}
-            style={styles.input}
-            value={edu.institution}
-            onChangeText={(text) =>
-              handleNestedChange('education', index, 'institution', text)
-            }
+          <AnimatedTextInput
+            placeholder="Last Name *"
+            value={form.last_name.trim()}
+            onChangeText={(text) => handleChange('last_name', text)}
           />
-          <TextInput
-            placeholder={`Year ${index + 1}`}
-            style={styles.input}
+          <AnimatedTextInput
+            placeholder="Profile Picture URL"
+            value={form.profile_picture_url.trim()}
+            onChangeText={(text) => handleChange('profile_picture_url', text)}
+          />
+          <AnimatedTextInput
+            placeholder="Biography"
+            style={[styles.input, styles.textArea]}
+            multiline
+            numberOfLines={4}
+            value={form.biography}
+            onChangeText={(text) => handleChange('biography', text)}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.header}>License</Text>
+          <View style={styles.divider} />
+          <AnimatedTextInput
+            placeholder="License Number *"
+            value={form.license_number}
+            onChangeText={(text) => handleChange('license_number', text)}
+          />
+          <AnimatedTextInput
+            placeholder="Issuing Authority *"
+            value={form.license_issuing_authority}
+            onChangeText={(text) => handleChange('license_issuing_authority', text)}
+          />
+          <Text style={styles.label}>License Expiry Date *</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.dateButton,
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <LinearGradient
+              colors={['#6c63ff', '#8e8dfa']}
+              style={styles.dateButtonGradient}
+            >
+              <Text style={styles.dateButtonText}>
+                {form.license_expiry_date || 'Select Date'} 📅
+              </Text>
+            </LinearGradient>
+          </Pressable>
+          {showDatePicker && (
+            <DateTimePicker
+              value={parseDate(form.license_expiry_date)}
+              mode="date"
+              display="default"
+              onChange={onChangeDate}
+              minimumDate={new Date()}
+              maximumDate={new Date(2100, 11, 31)}
+            />
+          )}
+          <AnimatedTextInput
+            placeholder="Years of Experience *"
             keyboardType="numeric"
-            value={edu.year}
+            value={String(form.years_of_experience)}
             onChangeText={(text) =>
-              handleNestedChange('education', index, 'year', text)
+              handleChange('years_of_experience', parseInt(text) || 0)
             }
           />
         </View>
-      ))}
 
-      <Text style={styles.header}>Certifications</Text>
-      {form.certifications.map((cert, index) => (
-        <View key={index} style={styles.nestedContainer}>
-          <TextInput
-            placeholder={`Certification ${index + 1}`}
-            style={styles.input}
-            value={cert.name}
-            onChangeText={(text) =>
-              handleNestedChange('certifications', index, 'name', text)
-            }
+        <View style={styles.section}>
+          <Text style={styles.header}>Education</Text>
+          <View style={styles.divider} />
+          {form.education.map((edu, index) => (
+            <View key={index} style={styles.nestedContainer}>
+              <AnimatedTextInput
+                placeholder={`Degree ${index + 1}`}
+                value={edu.degree}
+                onChangeText={(text) =>
+                  handleNestedChange('education', index, 'degree', text)
+                }
+              />
+              <AnimatedTextInput
+                placeholder={`Institution ${index + 1}`}
+                value={edu.institution}
+                onChangeText={(text) =>
+                  handleNestedChange('education', index, 'institution', text)
+                }
+              />
+              <AnimatedTextInput
+                placeholder={`Year ${index + 1}`}
+                keyboardType="numeric"
+                value={edu.year}
+                onChangeText={(text) =>
+                  handleNestedChange('education', index, 'year', text)
+                }
+              />
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.header}>Certifications</Text>
+          <View style={styles.divider} />
+          {form.certifications.map((cert, index) => (
+            <View key={index} style={styles.nestedContainer}>
+              <AnimatedTextInput
+                placeholder={`Certification ${index + 1}`}
+                value={cert.name}
+                onChangeText={(text) =>
+                  handleNestedChange('certifications', index, 'name', text)
+                }
+              />
+              <AnimatedTextInput
+                placeholder={`Institution ${index + 1}`}
+                value={cert.institution}
+                onChangeText={(text) =>
+                  handleNestedChange('certifications', index, 'institution', text)
+                }
+              />
+              <AnimatedTextInput
+                placeholder={`Year ${index + 1}`}
+                keyboardType="numeric"
+                value={cert.year}
+                onChangeText={(text) =>
+                  handleNestedChange('certifications', index, 'year', text)
+                }
+              />
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.header}>Availability</Text>
+          <View style={styles.divider} />
+          <View style={styles.switchContainer}>
+            <Text style={styles.switchLabel}>Offers Initial Consultation</Text>
+            <Switch
+              value={form.offers_initial_consultation}
+              onValueChange={(val) =>
+                handleChange('offers_initial_consultation', val)
+              }
+              trackColor={{ false: '#ccc', true: '#6c63ff' }}
+              thumbColor="#fff"
+              style={styles.switch}
+            />
+          </View>
+          <View style={styles.switchContainer}>
+            <Text style={styles.switchLabel}>Offers Online Sessions</Text>
+            <Switch
+              value={form.offers_online_sessions}
+              onValueChange={(val) =>
+                handleChange('offers_online_sessions', val)
+              }
+              trackColor={{ false: '#ccc', true: '#6c63ff' }}
+              thumbColor="#fff"
+              style={styles.switch}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.header}>Contact & Rates</Text>
+          <View style={styles.divider} />
+          <AnimatedTextInput
+            placeholder="Office Address"
+            value={form.office_address}
+            onChangeText={(text) => handleChange('office_address', text)}
           />
-          <TextInput
-            placeholder={`Institution ${index + 1}`}
-            style={styles.input}
-            value={cert.institution}
-            onChangeText={(text) =>
-              handleNestedChange('certifications', index, 'institution', text)
-            }
+          <AnimatedTextInput
+            placeholder="Website URL"
+            value={form.website_url}
+            onChangeText={(text) => handleChange('website_url', text)}
           />
-          <TextInput
-            placeholder={`Year ${index + 1}`}
-            style={styles.input}
+          <AnimatedTextInput
+            placeholder="LinkedIn URL"
+            value={form.linkedin_url}
+            onChangeText={(text) => handleChange('linkedin_url', text)}
+          />
+          <AnimatedTextInput
+            placeholder="Hourly Rate ($) *"
             keyboardType="numeric"
-            value={cert.year}
+            value={form.hourly_rate}
+            onChangeText={(text) => handleChange('hourly_rate', text)}
+          />
+          <AnimatedTextInput
+            placeholder="Initial Consultation Rate ($) *"
+            keyboardType="numeric"
+            value={form.initial_consultation_rate}
             onChangeText={(text) =>
-              handleNestedChange('certifications', index, 'year', text)
+              handleChange('initial_consultation_rate', text)
             }
           />
         </View>
-      ))}
 
-      <Text style={styles.header}>Availability</Text>
-      <View style={styles.switchContainer}>
-        <Text style={styles.switchLabel}>Offers Initial Consultation</Text>
-        <Switch
-          value={form.offers_initial_consultation}
-          onValueChange={(val) =>
-            handleChange('offers_initial_consultation', val)
-          }
-        />
-      </View>
-      <View style={styles.switchContainer}>
-        <Text style={styles.switchLabel}>Offers Online Sessions</Text>
-        <Switch
-          value={form.offers_online_sessions}
-          onValueChange={(val) =>
-            handleChange('offers_online_sessions', val)
-          }
-        />
-      </View>
-
-      <Text style={styles.header}>Contact & Rates</Text>
-      <TextInput
-        placeholder="Office Address"
-        style={styles.input}
-        value={form.office_address}
-        onChangeText={(text) => handleChange('office_address', text)}
-      />
-      <TextInput
-        placeholder="Website URL"
-        style={styles.input}
-        value={form.website_url}
-        onChangeText={(text) => handleChange('website_url', text)}
-      />
-      <TextInput
-        placeholder="LinkedIn URL"
-        style={styles.input}
-        value={form.linkedin_url}
-        onChangeText={(text) => handleChange('linkedin_url', text)}
-      />
-      <TextInput
-        placeholder="Hourly Rate ($) *"
-        style={styles.input}
-        keyboardType="numeric"
-        value={form.hourly_rate}
-        onChangeText={(text) => handleChange('hourly_rate', text)}
-      />
-      <TextInput
-        placeholder="Initial Consultation Rate ($) *"
-        style={styles.input}
-        keyboardType="numeric"
-        value={form.initial_consultation_rate}
-        onChangeText={(text) =>
-          handleChange('initial_consultation_rate', text)
-        }
-      />
-
-      <View style={styles.buttonContainer}>
-        <Button title="Save Profile" onPress={handleUpdate} color={THEME_COLOR} />
-      </View>
-    </ScrollView>
+        <Animated.View style={{ transform: [{ scale: animatedValue }], width: '100%' }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              pressed && { opacity: 0.9, shadowOpacity: 0.3 },
+            ]}
+            onPressIn={animatePressIn}
+            onPressOut={animatePressOut}
+            onPress={handleUpdate}
+          >
+            <LinearGradient
+              colors={['#6c63ff', '#8e8dfa']}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.buttonText}>Save Profile</Text>
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 export default EditProfile;
 
-const THEME_COLOR = '#8C96FF';
-
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: '#f9f9f9',
+    flex: 1,
+  },
+  content: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#6c63ff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+    marginBottom: 16,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6c63ff',
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#ffffffcc',
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  section: {
+    width: '100%',
+    backgroundColor: '#fff',
+    marginBottom: 24,
+    padding: 24,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  header: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+  },
+  divider: {
+    height: 1.5,
+    backgroundColor: '#6c63ff22',
+    marginBottom: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 12,
-    marginBottom: 12,
-    borderRadius: 8,
-    backgroundColor: '#fff',
+    borderColor: '#ddd',
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: '#f9f9fb',
+    fontSize: 16,
+    color: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   textArea: {
-    height: 100,
+    height: 140,
   },
-  header: {
-    fontWeight: 'bold',
-    fontSize: 18,
-    marginTop: 16,
-    marginBottom: 8,
+  label: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  dateButton: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  dateButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
     justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingVertical: 8,
   },
   switchLabel: {
     fontSize: 16,
+    color: '#555',
+    fontWeight: '500',
   },
-  buttonContainer: {
-    marginTop: 20,
+  switch: {
+    transform: [{ scaleX: 1.3 }, { scaleY: 1.3 }],
   },
   nestedContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  button: {
+    borderRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+    marginTop: 32,
+    marginBottom: 48,
+  },
+  buttonGradient: {
+    paddingVertical: 18,
+    paddingHorizontal: 64,
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
   },
 });
