@@ -10,6 +10,7 @@ const ConfirmPage = () => {
   const handleConfirmBooking = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
+      const user_id = await AsyncStorage.getItem('user_id');
       if (!token) {
         Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập.');
         return;
@@ -30,8 +31,18 @@ const ConfirmPage = () => {
           },
         }
       );
-
+      console.log('name', bookingData.psychologist_name)
       // You can pass response.data if needed to receipt page
+      console.log('id', user_id)
+      const paymentResponse = await api.post(
+      `/api/payments/orders/${user_id}/initiate_payment/`,
+      {}, // some APIs might need a body, if not, keep it empty
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      }
+    );
       router.push('/receipt');
     } catch (error) {
       console.error('Booking failed:', error);
@@ -44,13 +55,13 @@ const ConfirmPage = () => {
       <Text style={styles.title}>Xác nhận thông tin lịch hẹn</Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}><Text style={styles.bold}>Chuyên gia: </Text>{bookingData.slotDetails?.psychologist_name || 'N/A'}</Text>
+        <Text style={styles.label}><Text style={styles.bold}>Chuyên gia: </Text>{bookingData.psychologist_name || 'N/A'}</Text>
         <Text style={styles.label}><Text style={styles.bold}>Dịch vụ: </Text>{bookingData.session_type === 'OnlineMeeting' ? 'Tư vấn online' : 'Tư vấn trực tiếp'}</Text>
         <Text style={styles.label}><Text style={styles.bold}>Thời gian: </Text>{bookingData.slotDetails?.timeRange} ngày {bookingData.slotDetails?.date}</Text>
         <Text style={styles.label}><Text style={styles.bold}>Thông tin người hẹn:</Text></Text>
-        <Text style={styles.subLabel}>{bookingData.name}</Text>
-        <Text style={styles.subLabel}>{bookingData.phone}</Text>
-        <Text style={styles.subLabel}>{bookingData.email}</Text>
+        <Text style={styles.subLabel}>Họ và Tên: {bookingData.name}</Text>
+        <Text style={styles.subLabel}>Số điện thoại: {bookingData.phone}</Text>
+        <Text style={styles.subLabel}>Email: {bookingData.email}</Text>
       </View>
 
       <View style={styles.divider} />

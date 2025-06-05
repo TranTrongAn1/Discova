@@ -2,7 +2,8 @@ import { Dimensions, ImageBackground, StyleSheet, Text, View, TouchableOpacity, 
 import React, { useState, useEffect } from 'react';
 import top from '../../assets/images/TopCalendar.png';
 import { Feather } from '@expo/vector-icons'; 
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../(auth)/api';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const sampleUpcomingAppointment = {
   id: 'upcoming1',
@@ -58,14 +59,28 @@ const samplePastAppointments = [
     status: 'Đã hoàn thành'
   }
 ];
+const formatDate = (dateString) => {
 
+
+
+  const date = new Date(dateString);
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  
+  // Get day of week in Vietnamese
+  const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  const dayOfWeek = daysOfWeek[date.getDay()];
+  
+  return `${dayOfWeek}, ${day}/${month}/${year}`;
+};
 const Calendar = () => {
   // Get current date for display
   const [currentDate, setCurrentDate] = useState(new Date());
   const [weekDays, setWeekDays] = useState([]);
   const daysOfWeek = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
-  const [pastAppointments, setPastAppointments] = useState(samplePastAppointments);
-  const [upcomingAppointments, setUpcomingAppointments] = useState([sampleUpcomingAppointment]);
+  const [pastAppointments, setPastAppointments] = useState([]);
+ const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   // Function to get Vietnamese day name
   const getVietnameseDayName = (dayOfWeek) => {
     const vietDayNames = [
@@ -74,6 +89,38 @@ const Calendar = () => {
     return vietDayNames[dayOfWeek];
   };
   
+   useEffect(() => {
+        const fetchUpcomingAppointment = async () => {
+          try {
+            const token = await AsyncStorage.getItem('access_token');
+            if (!token) {
+              console.warn('No token found in storage.');
+              return;
+            }
+
+            const response = await api.get('api/appointments/upcoming/', {
+              headers: {
+                Authorization: `Token ${token}`
+              }
+            });
+
+            const upcoming = response.data.next_appointment;
+            setUpcomingAppointments(upcoming);
+            console.log('Next appointment:', upcoming);
+
+            const historyRes = await api.get('api/appointments/history/', {
+            headers: { Authorization: `Token ${token}` }
+              });
+              setPastAppointments(historyRes.data.history); // assuming the key is 'history'
+              console.log('Appointment history:', historyRes.data.history);
+          } catch (error) {
+            console.error('Failed to fetch upcoming appointment:', error);
+          }
+        };
+
+        fetchUpcomingAppointment();
+      }, []);
+
   // Calculate the days of the week containing the current date
   useEffect(() => {
     const today = new Date(currentDate);
@@ -164,17 +211,21 @@ const Calendar = () => {
       {/* lịch hẹn của bạn */}
     <View style={styles.appointmentContainer}>
         <Text style={styles.sectionTitle}>Lịch hẹn của bạn</Text>
-        {upcomingAppointments.length > 0 ? (
-          upcomingAppointments.map((appointment) => (
-            <View key={appointment.id} style={styles.appointmentCardWrapper} >
+        {upcomingAppointments ? (
+            <View style={styles.appointmentCardWrapper} >
               <View style={styles.card}>
-                <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.expert}</Text>
-                <Text style={styles.cardText}><Text style={styles.bold}>Dịch vụ:</Text> {appointment.service}</Text>
-                <Text style={styles.cardText}><Text style={styles.bold}>Thời gian:</Text> {appointment.time} {appointment.date}</Text>
-                <Text style={styles.cardText}><Text style={styles.bold}>Thông tin người hẹn:</Text></Text>
-                <Text style={styles.cardText}>{appointment.user.name}</Text>
-                <Text style={styles.cardText}>{appointment.user.phone}</Text>
-                <Text style={styles.cardText}>{appointment.user.email}</Text>
+                <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {upcomingAppointments.psychologist_name}</Text>
+                <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDate(upcomingAppointments.scheduled_start_time)} - {new Date(upcomingAppointments.scheduled_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} đến {new Date(upcomingAppointments.scheduled_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={styles.cardText}><Text style={styles.bold}>Hình thức tư vấn:</Text> {upcomingAppointments.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : upcomingAppointments.session_type}</Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Thời lượng:</Text> {upcomingAppointments.duration_hours} giờ
+                </Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Địa chỉ:</Text> {upcomingAppointments.meeting_address}
+                </Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Trạng thái:</Text> {upcomingAppointments.appointment_status === 'Scheduled' ? 'Đã lên lịch' : upcomingAppointments.appointment_status}
+                </Text>
               </View>
               <View style={styles.buttonRow}>
                 <TouchableOpacity style={styles.detailButton}>
@@ -185,7 +236,6 @@ const Calendar = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          ))
         ) : (
           <Text style={styles.noAppointmentText}>Không có lịch hẹn nào sắp tới.</Text>
         )}
@@ -193,27 +243,29 @@ const Calendar = () => {
       {/* lịch sử hẹn */}
       <View style={styles.appointmentContainer}>
         <Text style={styles.sectionTitle}>Lịch sử hẹn</Text>
-        {pastAppointments.length > 0 ? (
+        {pastAppointments ? (
           pastAppointments.map((appointment) => (
-            <View key={appointment.id} style={styles.appointmentCardWrapper}>
+           <View style={styles.appointmentCardWrapper} >
               <View style={styles.card}>
-                <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.expert}</Text>
-                <Text style={styles.cardText}><Text style={styles.bold}>Dịch vụ:</Text> {appointment.service}</Text>
-                <Text style={styles.cardText}><Text style={styles.bold}>Thời gian:</Text> {appointment.time} {appointment.date}</Text>
-                {appointment.status && ( // Display status if available
-                  <Text style={styles.cardText}><Text style={styles.bold}>Trạng thái:</Text> {appointment.status}</Text>
-                )}
-                <Text style={styles.cardText}><Text style={styles.bold}>Thông tin người hẹn:</Text></Text>
-                <Text style={styles.cardText}>{appointment.user.name}</Text>
-                <Text style={styles.cardText}>{appointment.user.phone}</Text>
-                <Text style={styles.cardText}>{appointment.user.email}</Text>
+                <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}</Text>
+                <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDate(appointment.scheduled_start_time)} - {new Date(appointment.scheduled_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} đến {new Date(appointment.scheduled_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={styles.cardText}><Text style={styles.bold}>Hình thức tư vấn:</Text> {appointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : appointment.session_type}</Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Thời lượng:</Text> {appointment.duration_hours} giờ
+                </Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Địa chỉ:</Text> {appointment.meeting_address}
+                </Text>
+                <Text style={styles.cardText}>
+                  <Text style={styles.bold}>Trạng thái:</Text> {appointment.appointment_status === 'Scheduled' ? 'Đã lên lịch' : appointment.appointment_status}
+                </Text>
               </View>
               <View style={styles.buttonRow}>
                 <TouchableOpacity style={styles.detailButton}>
                   <Text style={styles.detailButtonText}>CHI TIẾT</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelButton}>
-                  <Text style={styles.cancelButtonText}>ĐẶT LẠI LỊCH</Text>
+                  <Text style={styles.cancelButtonText}>HUỶ LỊCH</Text>
                 </TouchableOpacity>
               </View>
             </View>

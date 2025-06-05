@@ -179,25 +179,37 @@ const Home = () => {
             ))}
           </View>
         </View>
-        <Text style={styles.text}>Lịch hẹn sắp tới của bạn</Text>
-
-          {nextAppointment ? (
-            <View style={styles.appointmentContainer}>
-              <View style={styles.card}>
-                <Text style={styles.cardText}>
-                  <Text style={styles.bold}>Thời gian:</Text> {formatDate(nextAppointment.scheduled_start_time)}
-                </Text>
-                <Text style={styles.cardText}>
-                  <Text style={styles.bold}>Người hẹn:</Text> {nextAppointment.child_name}
-                </Text>
-                <Text style={styles.cardText}>
-                  <Text style={styles.bold}>Mã lịch hẹn:</Text> {nextAppointment.appointment_id}
-                </Text>
-              </View>
+        <Text style={styles.text}>Lịch hẹn sắp tới</Text>
+       {nextAppointment ? (
+          <View style={styles.appointmentContainer}>
+            <View style={styles.card}>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Ngày & giờ:</Text> {formatDate(nextAppointment.scheduled_start_time)} - {new Date(nextAppointment.scheduled_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} đến {new Date(nextAppointment.scheduled_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Người được tư vấn:</Text> {nextAppointment.child_name}
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Chuyên gia:</Text> {nextAppointment.psychologist_name}
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Hình thức tư vấn:</Text> {nextAppointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : nextAppointment.session_type}
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Thời lượng:</Text> {nextAppointment.duration_hours} giờ
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Địa chỉ:</Text> {nextAppointment.meeting_address}
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Trạng thái:</Text> {nextAppointment.appointment_status === 'Scheduled' ? 'Đã lên lịch' : nextAppointment.appointment_status}
+              </Text>
             </View>
-          ) : (
-            <Text style={[styles.cardText, { marginLeft: 20 }]}>Không có lịch hẹn sắp tới.</Text>
-          )}
+          </View>
+        ) : (
+          <Text style={[styles.cardText, { marginLeft: 20 }]}>Không có lịch hẹn sắp tới.</Text>
+        )}
+
 
       </View>
         <Text style={styles.text}>Các chuyên gia nổi bật</Text>

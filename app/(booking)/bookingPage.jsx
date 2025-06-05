@@ -18,7 +18,7 @@ const BookingPage = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [notify, setNotify] = useState('Có');
-
+  const [PsyName, SetpsyName] = useState('');
   const { id, type } = useLocalSearchParams(); // ✅ get passed parameters
   const psychologistId = id; // ✅ dynamic psychologist ID
 
@@ -43,7 +43,7 @@ const BookingPage = () => {
             }
           );
           const data = response.data;
-
+          SetpsyName(response.data.psychologist_name)
           if (!data.available_slots || data.available_slots.length === 0) {
             setAvailableSlots(null); // <-- no slots available
             return;
@@ -102,6 +102,7 @@ const BookingPage = () => {
         const bookingInfo = {
           childId: storedChildId, // ✅ convert to number if needed
           psychologistId: id,
+          psychologist_name: PsyName,
           session_type: mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation',
           start_slot_id: selectedSlotId,
           parent_notes: specialRequest,

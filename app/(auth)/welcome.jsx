@@ -36,7 +36,7 @@ const welcome = () => {
   )
 }
 
-export default welcome
+export default welcome 
 
 const styles = StyleSheet.create({
   container: {
