@@ -43,7 +43,7 @@ const ConfirmPage = () => {
         },
       }
     );
-      router.push('/receipt');
+      router.push('/receipt'); //tạo đều kiện thay cho router if success thì vào successPage còn failed or Cancel thì vào failedPage
     } catch (error) {
       console.error('Booking failed:', error);
       Alert.alert('Lỗi', 'Không thể đặt lịch. Vui lòng thử lại sau.');
