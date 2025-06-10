@@ -15,35 +15,50 @@ const ConfirmPage = () => {
         Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập.');
         return;
       }
-      console.log('Booking data:', bookingData); // ✅ Log booking data for debugging
-      const response = await api.post(
-        '/api/appointments/',
-        {
-          child: bookingData.childId,
-          psychologist: bookingData.psychologistId,
-          session_type: bookingData.session_type,
-          start_slot_id: bookingData.start_slot_id,
-          parent_notes: bookingData.parent_notes,
-        },
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        }
-      );
-      console.log('name', bookingData.psychologist_name)
-      // You can pass response.data if needed to receipt page
-      console.log('id', user_id)
+          const createOrderResponse = await api.post(
+            '/api/payments/orders/create_appointment_order/',
+            {
+              psychologist_id: bookingData.psychologistId,
+              child_id: bookingData.childId,
+              session_type: bookingData.session_type, // "OnlineMeeting" or "InitialConsultation"
+              start_slot_id: bookingData.start_slot_id,
+              parent_notes: bookingData.parent_notes || "",
+              currency: "USD",
+              provider: "stripe",
+            },
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+
       const paymentResponse = await api.post(
-      `/api/payments/orders/${user_id}/initiate_payment/`,
-      {}, // some APIs might need a body, if not, keep it empty
+      `/api/payments/orders/${createOrderResponse.data.order.order_id}/initiate_payment/`,
+      {
+         success_url: 'http://localhost:8081/success',
+         cancel_url: 'http://localhost:8081/failed',
+      }, // some APIs might need a body, if not, keep it empty
       {
         headers: {
           Authorization: `Token ${token}`,
+          'Content-Type': 'application/json',
         },
       }
     );
-      router.push('/receipt'); //tạo đều kiện thay cho router if success thì vào successPage còn failed or Cancel thì vào failedPage
+        const clientSecret = paymentResponse.data.client_secret;
+
+    // Step 3: Navigate to Stripe payment screen
+    router.push({
+      pathname: '/payment',
+      params: {
+        clientSecret,
+        orderId: user_id, // same as user_id in your case
+      },
+    });
+
     } catch (error) {
       console.error('Booking failed:', error);
       Alert.alert('Lỗi', 'Không thể đặt lịch. Vui lòng thử lại sau.');

@@ -103,7 +103,7 @@ const BookingPage = () => {
           childId: storedChildId, // ✅ convert to number if needed
           psychologistId: id,
           psychologist_name: PsyName,
-          session_type: mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation',
+          session_type: mode === 'Online' ? 'online_session' : 'initial_session',
           start_slot_id: selectedSlotId,
           parent_notes: specialRequest,
           name,
