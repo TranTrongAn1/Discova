@@ -21,13 +21,39 @@ const BookingPage = () => {
   const [PsyName, SetpsyName] = useState('');
   const { id, type } = useLocalSearchParams(); // ✅ get passed parameters
   const psychologistId = id; // ✅ dynamic psychologist ID
+    const [childId, setChildId] = useState('');
+
+    const fetchProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found');
+          return;
+        }
+        
+        const res = await api.get(`/api/children/profile/my_children/`, {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        });
+        if (res.data.count > 0 && res.data.children.length > 0) {
+          const child = res.data.children[0];
+          setChildId(child.id);
+          setMode('view');
+        } else {
+          setMode('create');
+        }
+      } catch (err) {
+        console.error(err);
+        setMode('create');
+      }
+    };
 
 
       const fetchAvailableSlots = async () => {
         const today = new Date();
         const dateFrom = today.toISOString().split('T')[0];
         const dateTo = new Date(today.setDate(today.getDate() + 30)).toISOString().split('T')[0];
-        console.log('typeof id:', id);
         try {
           const token = await AsyncStorage.getItem('access_token');
           if (!token) {
@@ -63,6 +89,7 @@ const BookingPage = () => {
       };
         useEffect(() => {
           fetchAvailableSlots();
+          fetchProfile();
         }, [mode]);
 
         const toggleSlot = (slot) => {
@@ -93,17 +120,12 @@ const BookingPage = () => {
 
 
       try {
-        const storedChildId = await AsyncStorage.getItem('child_id');
-        if (!storedChildId) {
-          Alert.alert('Lỗi', 'Không tìm thấy thông tin trẻ.');
-          return;
-        }
 
         const bookingInfo = {
-          childId: storedChildId, // ✅ convert to number if needed
+          childId: childId,
           psychologistId: id,
           psychologist_name: PsyName,
-          session_type: mode === 'Online' ? 'online_session' : 'initial_session',
+          session_type: mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation',
           start_slot_id: selectedSlotId,
           parent_notes: specialRequest,
           name,
@@ -168,23 +190,6 @@ return (
         );
       })
     )}
-
-    {/* The rest of your UI code unchanged */}
-    <Text style={styles.title}>Bạn muốn tư vấn theo hình thức nào?</Text>
-    <View style={styles.columnOptions}>
-      <TouchableOpacity
-        style={[styles.methodOption, mode === 'Trực tiếp' && styles.selectedMethod]}
-        onPress={() => setMode('Trực tiếp')}
-      >
-        <Text>Trực tiếp - 799.000đ / 1 tiếng</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.methodOption, mode === 'Online' && styles.selectedMethod]}
-        onPress={() => setMode('Online')}
-      >
-        <Text>Online - 599.000đ / 1 tiếng</Text>
-      </TouchableOpacity>
-    </View>
 
     <Text style={styles.title}>Bạn có yêu cầu hình thức tư vấn đặc biệt nào không?</Text>
     <TextInput

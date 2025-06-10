@@ -3,10 +3,11 @@ import React from 'react';
 import { router, useLocalSearchParams} from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../(auth)/api';
+// import { PaymentIntent } from '@stripe/stripe-react-native';
 const ConfirmPage = () => {
   const { data } = useLocalSearchParams();
   const bookingData = JSON.parse(data); // ✅ Real booking data passed from BookingPage
-
+ console.log('Child ID:', bookingData.childId);
   const handleConfirmBooking = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
@@ -16,7 +17,7 @@ const ConfirmPage = () => {
         return;
       }
           const createOrderResponse = await api.post(
-            '/api/payments/orders/create_appointment_order/',
+            '/api/payments/orders/create_appointment_order_with_reservation/',
             {
               psychologist_id: bookingData.psychologistId,
               child_id: bookingData.childId,
@@ -34,7 +35,6 @@ const ConfirmPage = () => {
             }
           );
 
-
       const paymentResponse = await api.post(
       `/api/payments/orders/${createOrderResponse.data.order.order_id}/initiate_payment/`,
       {
@@ -48,19 +48,19 @@ const ConfirmPage = () => {
         },
       }
     );
-        const clientSecret = paymentResponse.data.client_secret;
-
+        const clientSecret = paymentResponse.data.payment_data.client_secret;
+        console.log(paymentResponse)
     // Step 3: Navigate to Stripe payment screen
     router.push({
-      pathname: '/payment',
+      pathname: './payment1',
       params: {
         clientSecret,
-        orderId: user_id, // same as user_id in your case
+        PaymentIntent:  paymentResponse.data.payment_data.payment_intent_id,
       },
     });
 
     } catch (error) {
-      console.error('Booking failed:', error);
+      console.error('Booking failed:', error.response?.data || error.message || error);
       Alert.alert('Lỗi', 'Không thể đặt lịch. Vui lòng thử lại sau.');
     }
   };
