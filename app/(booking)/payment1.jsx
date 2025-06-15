@@ -4,7 +4,7 @@ import { CardField, useConfirmPayment } from '@stripe/stripe-react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 const StripePaymentScreen = () => {
-  const { clientSecret, PaymentIntent } = useLocalSearchParams();
+  const { clientSecret, PaymentIntent, PaymentMethodType } = useLocalSearchParams();
   const [cardDetails, setCardDetails] = useState();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -18,7 +18,7 @@ const StripePaymentScreen = () => {
 
     setLoading(true);
     const { paymentIntent, error } = await confirmPayment(clientSecret, {
-      type: 'Card',
+      type: PaymentMethodType,
       billingDetails: {
         name: 'Dr. Jane Smith',
         email: 'testpsy1@example.com',
@@ -39,6 +39,7 @@ const StripePaymentScreen = () => {
       <View style={styles.infoBox}>
         <Text style={styles.title}>🧪 K&Mdiscova Registration Payment Test</Text>
         <Text><Text style={styles.label}>Payment Intent:</Text> {PaymentIntent}</Text>
+        <Text><Text style={styles.label}>Payment Metohd:</Text> {PaymentMethodType}</Text>
         <Text><Text style={styles.label}>Amount:</Text> $100.00</Text>
         <Text><Text style={styles.label}>Test Card:</Text> 4242 4242 4242 4242</Text>
       </View>

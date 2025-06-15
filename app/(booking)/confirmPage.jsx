@@ -21,7 +21,7 @@ const ConfirmPage = () => {
             {
               psychologist_id: bookingData.psychologistId,
               child_id: bookingData.childId,
-              session_type: bookingData.session_type, // "OnlineMeeting" or "InitialConsultation"
+              session_type: bookingData.session_type,
               start_slot_id: bookingData.start_slot_id,
               parent_notes: bookingData.parent_notes || "",
               currency: "USD",
@@ -56,6 +56,7 @@ const ConfirmPage = () => {
       params: {
         clientSecret,
         PaymentIntent:  paymentResponse.data.payment_data.payment_intent_id,
+        PaymentMethodType: paymentResponse.data.payment_data.payment_method_type,
       },
     });
 
