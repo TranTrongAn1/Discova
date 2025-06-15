@@ -19,6 +19,7 @@
     "@react-navigation/bottom-tabs": "^7.3.13",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.9",
+    "@stripe/stripe-react-native": "0.45.0",
     "axios": "^1.9.0",
     "discova": "file:",
     "expo": "~53.0.9",
@@ -49,8 +50,7 @@
     "react-native-toast-message": "^2.3.0",
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5",
-    "@stripe/stripe-react-native": "0.45.0"
+    "react-native-webview": "13.13.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

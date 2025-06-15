@@ -10,8 +10,9 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Animated
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -19,7 +20,7 @@ import axios from 'axios';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const Register = () => {
+const Register = ({ onSwitch }) => {
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
   const [agreePolicy, setAgreePolicy] = useState(false);
@@ -28,18 +29,44 @@ const Register = () => {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [userType, setUserType] = useState('Parent'); // Default value
   const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    style={{ flex: 1 }}
-  >
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, backgroundColor:'#fff' }}
+        >
     {/* scroll in case content is still taller than screen */}
     <ScrollView
       contentContainerStyle={{ flexGrow: 1 }}
       keyboardShouldPersistTaps="handled"
     >
-    <View style={styles.container}>
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateX: slideAnim }],
+        }}
+      >
+
       <Toast />
      <TouchableOpacity style={styles.backButton} onPress={router.back}>
         <Ionicons name="arrow-back" size={24} color="black" />
@@ -207,7 +234,7 @@ const Register = () => {
           >
         <Text style={styles.buttonText}>BẮT ĐẦU</Text>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
         </ScrollView>
   </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
