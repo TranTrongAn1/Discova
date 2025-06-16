@@ -12,6 +12,9 @@ const Failed = () => {
       <Text style={styles.message}>
         Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại hoặc kiểm tra kết nối mạng.
       </Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.replace('/(parent)/home')}>
+        <Text style={styles.buttonText}>Về Home</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -41,5 +44,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     color: '#666',
+  },
+  button: {
+    backgroundColor: '#8E97FD',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

@@ -101,6 +101,7 @@ const Calendar = () => {
 
   const handleCancelSubmit = async (cancellation_reason) => {
     try {
+      console.log('id của mày nè: ', selectedAppointmentId)
       const token = await AsyncStorage.getItem('access_token');
       await api.post(`/api/appointments/${selectedAppointmentId}/cancel/`, { cancellation_reason }, {
         headers: {
@@ -199,7 +200,7 @@ const Calendar = () => {
           <Text style={styles.sectionTitle}>Lịch hẹn của bạn</Text>
           {upcomingAppointments && upcomingAppointments.length > 0 ? (
             upcomingAppointments.map((appointment, index) => (
-              <View key={appointment.id || index} style={styles.appointmentCardWrapper}>
+              <View key={appointment.appointment_id || index} style={styles.appointmentCardWrapper}>
                 <View style={styles.card}>
                   <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}</Text>
                   <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDate(appointment.scheduled_start_time)} - {new Date(appointment.scheduled_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} đến {new Date(appointment.scheduled_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
@@ -224,7 +225,7 @@ const Calendar = () => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.cancelButton}
-                    onPress={() => handleCancelPress(appointment.id)}
+                    onPress={() => handleCancelPress(appointment.appointment_id)}
                   >
                     <Text style={styles.cancelButtonText}>HUỶ LỊCH</Text>
                   </TouchableOpacity>

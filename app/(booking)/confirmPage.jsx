@@ -1,13 +1,13 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import React from 'react';
-import { router, useLocalSearchParams} from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../(auth)/api';
 // import { PaymentIntent } from '@stripe/stripe-react-native';
 const ConfirmPage = () => {
   const { data } = useLocalSearchParams();
   const bookingData = JSON.parse(data); // ✅ Real booking data passed from BookingPage
- console.log('Child ID:', bookingData.childId);
+  console.log('Child ID:', bookingData.childId);
   const handleConfirmBooking = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
@@ -16,49 +16,52 @@ const ConfirmPage = () => {
         Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập.');
         return;
       }
-          const createOrderResponse = await api.post(
-            '/api/payments/orders/create_appointment_order_with_reservation/',
-            {
-              psychologist_id: bookingData.psychologistId,
-              child_id: bookingData.childId,
-              session_type: bookingData.session_type,
-              start_slot_id: bookingData.start_slot_id,
-              parent_notes: bookingData.parent_notes || "",
-              currency: "USD",
-              provider: "stripe",
-            },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
+      const createOrderResponse = await api.post(
+        '/api/payments/orders/create_appointment_order_with_reservation/',
+        {
+          psychologist_id: bookingData.psychologistId,
+          child_id: bookingData.childId,
+          session_type: bookingData.session_type,
+          start_slot_id: bookingData.start_slot_id,
+          parent_notes: bookingData.parent_notes || "",
+          currency: "USD",
+          provider: "stripe",
+        },
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       const paymentResponse = await api.post(
-      `/api/payments/orders/${createOrderResponse.data.order.order_id}/initiate_payment/`,
-      {
-         success_url: 'http://localhost:8081/success',
-         cancel_url: 'http://localhost:8081/failed',
-      }, // some APIs might need a body, if not, keep it empty
-      {
-        headers: {
-          Authorization: `Token ${token}`,
-          'Content-Type': 'application/json',
+        `/api/payments/orders/${createOrderResponse.data.order.order_id}/initiate_payment/`,
+        {
+          success_url: 'http://localhost:8081/success',
+          cancel_url: 'http://localhost:8081/failed',
+        }, // some APIs might need a body, if not, keep it empty
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const clientSecret = paymentResponse.data.payment_data.client_secret;
+      console.log(paymentResponse)
+      // Step 3: Navigate to Stripe payment screen
+      router.push({
+        pathname: './payment1',
+        params: {
+          clientSecret,
+          PaymentIntent: paymentResponse.data.payment_data.payment_intent_id,
+          PaymentMethodType: paymentResponse.data.payment_data.payment_method_type,
+          Amount: paymentResponse.data.payment_data.amount,
+          Currency: paymentResponse.data.payment_data.currency,
+          bookingData: JSON.stringify(bookingData),
         },
-      }
-    );
-        const clientSecret = paymentResponse.data.payment_data.client_secret;
-        console.log(paymentResponse)
-    // Step 3: Navigate to Stripe payment screen
-    router.push({
-      pathname: './payment1',
-      params: {
-        clientSecret,
-        PaymentIntent:  paymentResponse.data.payment_data.payment_intent_id,
-        PaymentMethodType: paymentResponse.data.payment_data.payment_method_type,
-      },
-    });
+      });
 
     } catch (error) {
       console.error('Booking failed:', error.response?.data || error.message || error);

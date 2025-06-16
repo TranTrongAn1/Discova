@@ -22,7 +22,99 @@ const BookingPage = () => {
   const { id, type } = useLocalSearchParams(); // ✅ get passed parameters
   const psychologistId = id; // ✅ dynamic psychologist ID
     const [childId, setChildId] = useState('');
+// Validation error states
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [nameError, setNameError] = useState('');
 
+  // Email validation function
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Phone validation function (Vietnam phone numbers)
+  const validatePhone = (phone) => {
+    // Remove all spaces and special characters
+    const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
+    
+    // Vietnam phone number patterns:
+    // Mobile: 03x, 05x, 07x, 08x, 09x (10 digits total)
+    // Or with country code: +84 or 84 (11-12 digits total)
+    const phoneRegex = /^(\+84|84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+    
+    return phoneRegex.test(cleanPhone);
+  };
+
+  // Handle email input change with validation
+  const handleEmailChange = (text) => {
+    setEmail(text);
+    if (text.trim() === '') {
+      setEmailError('');
+    } else if (!validateEmail(text)) {
+      setEmailError('Email không hợp lệ');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  // Handle phone input change with validation
+  const handlePhoneChange = (text) => {
+    setPhone(text);
+    if (text.trim() === '') {
+      setPhoneError('');
+    } else if (!validatePhone(text)) {
+      setPhoneError('Số điện thoại không hợp lệ');
+    } else {
+      setPhoneError('');
+    }
+  };
+
+  // Handle name input change with validation
+  const handleNameChange = (text) => {
+    setName(text);
+    if (text.trim() === '') {
+      setNameError('Vui lòng nhập họ và tên');
+    } else if (text.trim().length < 2) {
+      setNameError('Họ và tên phải có ít nhất 2 ký tự');
+    } else {
+      setNameError('');
+    }
+  };
+
+  // Validate all fields before submission
+  const validateAllFields = () => {
+    let isValid = true;
+
+    // Validate name
+    if (name.trim() === '') {
+      setNameError('Vui lòng nhập họ và tên');
+      isValid = false;
+    } else if (name.trim().length < 2) {
+      setNameError('Họ và tên phải có ít nhất 2 ký tự');
+      isValid = false;
+    }
+
+    // Validate phone
+    if (phone.trim() === '') {
+      setPhoneError('Vui lòng nhập số điện thoại');
+      isValid = false;
+    } else if (!validatePhone(phone)) {
+      setPhoneError('Số điện thoại không hợp lệ');
+      isValid = false;
+    }
+
+    // Validate email
+    if (email.trim() === '') {
+      setEmailError('Vui lòng nhập email');
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      setEmailError('Email không hợp lệ');
+      isValid = false;
+    }
+
+    return isValid;
+  };
     const fetchProfile = async () => {
       try {
         const token = await AsyncStorage.getItem('access_token');
@@ -105,6 +197,9 @@ const BookingPage = () => {
         };
 
       const handleSubmit = async () => {
+        if (!validateAllFields()) {
+      return;
+    }
       if (!name || !phone || !email || Object.values(selectedSlots).every((v) => !v)) {
         Alert.alert('Thông báo', 'Vui lòng điền đầy đủ thông tin và chọn ít nhất một khung giờ.');
         return;
@@ -202,29 +297,32 @@ return (
 
     <Text style={styles.title}>Thông tin cá nhân</Text>
     <TextInput
-      style={styles.input}
+    
+      style={[styles.input, nameError ? styles.inputError : null]}
       placeholder="Họ và tên của bạn"
       placeholderTextColor="#999"
       value={name}
-      onChangeText={setName}
+      onChangeText={handleNameChange}
     />
+    {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
     <TextInput
-      style={styles.input}
+      style={[styles.input, phoneError ? styles.inputError : null]}
       placeholder="Số điện thoại của bạn"
       placeholderTextColor="#999"
       value={phone}
       keyboardType="phone-pad"
-      onChangeText={setPhone}
+      onChangeText={handlePhoneChange}
     />
+    {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
     <TextInput
-      style={styles.input}
+      style={[styles.input, emailError ? styles.inputError : null]}
       placeholder="Email của bạn"
       placeholderTextColor="#999"
       value={email}
       keyboardType="email-address"
-      onChangeText={setEmail}
+      onChangeText={handleEmailChange}
     />
-
+ {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
     <Text style={styles.title}>Bạn có muốn nhận thông báo về lịch hẹn qua email không?</Text>
     <View style={styles.columnOptions}>
       {['Có', 'Không'].map((option) => (
@@ -344,5 +442,16 @@ const styles = StyleSheet.create({
     marginTop: 14,
     textTransform: 'uppercase',
     marginBottom: 70,
+  },
+    inputError: {
+    borderColor: '#ff4444',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });

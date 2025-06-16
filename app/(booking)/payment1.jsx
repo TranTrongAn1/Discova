@@ -1,18 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, Alert } from 'react-native';
+import { View, Text, StyleSheet, Button, Alert, TouchableOpacity } from 'react-native';
 import { CardField, useConfirmPayment, initStripe } from '@stripe/stripe-react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 const StripePaymentScreen = () => {
   // Receive the parameters exactly as sent from ConfirmPage
-  const { clientSecret, PaymentIntent, PaymentMethodType } = useLocalSearchParams();
+    const {
+    clientSecret,
+    PaymentIntent,
+    PaymentMethodType,
+    Amount,
+    Currency,
+    bookingData: bookingDataString,
+  } = useLocalSearchParams();
   
   const [cardDetails, setCardDetails] = useState();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [stripeInitialized, setStripeInitialized] = useState(false);
   const { confirmPayment } = useConfirmPayment();
-
+  const bookingData = JSON.parse(bookingDataString);
+  
+  // Now you can access all properties
+  const psychologist_name = bookingData.psychologist_name;
+  const booking_name = bookingData.name;
+  const session_type = bookingData.session_type;
+  const date = bookingData.slotDetails?.date || bookingData.date;
+  const time = bookingData.slotDetails?.timeRange || bookingData.time;
+  const parent_notes = bookingData.parent_notes;
   // Initialize Stripe when component mounts
   useEffect(() => {
     const initializeStripe = async () => {
@@ -69,28 +84,53 @@ const StripePaymentScreen = () => {
       } else if (paymentIntent) {
         console.log('Payment successful:', paymentIntent);
         setResult(paymentIntent);
-        Alert.alert('Success', 'Payment completed successfully!');
+        Alert.alert('Success', 'Payment completed successfully!',[
+          {
+            text: 'OK',
+            onPress: () => router.push('/success'), // ✅ Redirect to success page
+          },
+        ]);
       }
     } catch (err) {
       console.error('Unexpected error:', err);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
+        {
+          text: 'OK',
+          onPress: () => router.push('/failed'),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.infoBox}>
-        <Text style={styles.title}>🧪 K&Mdiscova Registration Payment Test</Text>
-        <Text><Text style={styles.label}>Payment Intent:</Text> {PaymentIntent}</Text>
-        <Text><Text style={styles.label}>Payment Method:</Text> {PaymentMethodType}</Text>
-        <Text><Text style={styles.label}>Client Secret:</Text> {clientSecret ? '✅ Ready' : '❌ Missing'}</Text>
-        <Text><Text style={styles.label}>Stripe Status:</Text> {stripeInitialized ? '✅ Ready' : '⏳ Initializing...'}</Text>
-        <Text><Text style={styles.label}>Test Card:</Text> 4242 4242 4242 4242</Text>
-        <Text style={styles.note}>💡 Use test card: 4242 4242 4242 4242, any future date, any CVC</Text>
+<View style={styles.container}>
+      {/* Header with summary + amount */}
+      <View style={styles.headerRow}>
+        <Text style={styles.summaryTitle}>Summary</Text>
+        <Text style={styles.amount}>Total: {Amount} {Currency}</Text>
       </View>
 
+      {/* Order Detail Box */}
+      <View style={styles.summaryBox}>
+        <Text style={styles.label}>Tên bác sĩ tâm lý:</Text>
+        <Text style={styles.value}>{psychologist_name}</Text>
+
+        <Text style={styles.label}>Tên người hẹn:</Text>
+        <Text style={styles.value}>{booking_name}</Text>
+
+        <Text style={styles.label}>Hình thức tư vấn:</Text>
+        <Text style={styles.value}>{session_type}</Text>
+
+        <Text style={styles.label}>Thời gian:</Text>
+        <Text style={styles.value}>{date},{time}</Text>
+
+        <Text style={styles.label}>Ghi chú:</Text>
+        <Text style={styles.value}>{parent_notes || '—'}</Text>
+      </View>
+
+      {/* Card Input */}
       <CardField
         postalCodeEnabled={false}
         placeholder={{ number: '4242 4242 4242 4242' }}
@@ -99,76 +139,112 @@ const StripePaymentScreen = () => {
         onCardChange={card => setCardDetails(card)}
       />
 
-      <Button
-        title={loading ? 'Processing...' : `Complete Registration Payment - 100$`}
+      {/* Payment Button */}
+      <TouchableOpacity
+        style={[styles.button, (loading || !cardDetails?.complete) && styles.disabled]}
         onPress={handlePayPress}
         disabled={loading || !cardDetails?.complete}
-        color="#007cba"
-      />
-
+        activeOpacity={0.8}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Processing...' : 'Complete Order'}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.push('/bookingPage')}
+      >
+        <Text style={styles.backButtonText}>← Quay về trang chỉnh sửa thông tin</Text>
+      </TouchableOpacity>
+      {/* Success Info
       {result && (
         <View style={styles.success}>
           <Text style={styles.successText}>✅ Payment Successful!</Text>
           <Text>Payment Intent ID: {result.id}</Text>
           <Text>Status: {result.status}</Text>
-          <Text style={{ marginTop: 10 }}>🔄 Next Steps:</Text>
-          <Text>1. Webhook will be sent to your server</Text>
-          <Text>2. Psychologist auto-approved</Text>
-          <Text>3. Check Django logs</Text>
-          <Text>4. Verify in admin or API</Text>
         </View>
-      )}
+      )} */}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    padding: 20, 
-    marginTop: 40 
+  container: {
+    padding: 20,
+    paddingTop: 100,
+    backgroundColor: '#fff',
+    flex: 1,
   },
-  infoBox: { 
-    backgroundColor: '#e3f2fd', 
-    padding: 15, 
-    borderRadius: 6, 
-    marginBottom: 20 
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
   },
-  label: { 
-    fontWeight: 'bold' 
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8E97FD',
   },
-  title: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    marginBottom: 10 
+  amount: {
+    fontSize: 25,
+    fontWeight: '700',
+    color: '#8E97FD',
   },
-  note: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-    marginTop: 5
+  summaryBox: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    backgroundColor: '#f9f9f9',
   },
-  cardContainer: { 
-    height: 50, 
-    marginVertical: 20 
+  label: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 8,
+  },
+  value: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#000',
+  },
+  cardContainer: {
+    height: 50,
+    marginVertical: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    textColor: '#000000',
+    backgroundColor: '#fff',
+    textColor: '#000',
     borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 4,
-  },
-  success: {
-    marginTop: 20,
-    backgroundColor: '#e6ffed',
-    padding: 15,
     borderRadius: 6,
   },
-  successText: {
-    color: '#2e7d32',
+  button: {
+    marginTop: 20,
+    backgroundColor: '#8E97FD',
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  disabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+  },
+  backButton: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  backButtonText: {
+    marginTop: 20,
+    color: '#8E97FD',
+    fontSize: 15,
   },
 });
+
 
 export default StripePaymentScreen;
