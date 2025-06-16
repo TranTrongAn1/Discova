@@ -2,40 +2,6 @@ import { StyleSheet, Text, View, Image } from 'react-native';
 import React from 'react';
 
 const Success = () => {
-   const booking = JSON.parse(bookingData);
-    useEffect(() => {
-    const handlePaymentSuccess = async () => {
-      try {
-        // Wait for real payment confirmation from Stripe webhook or SDK
-        // For now we assume payment success for demo purposes
-        const token = await AsyncStorage.getItem('access_token');
-
-        const response = await api.post(
-          '/api/appointments/',
-          {
-            child: booking.childId,
-            psychologist: booking.psychologistId,
-            session_type: booking.session_type,
-            start_slot_id: booking.start_slot_id,
-            parent_notes: booking.parent_notes,
-          },
-          {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          }
-        );
-
-        Alert.alert('Thành công', 'Lịch hẹn của bạn đã được tạo.');
-        router.push('/home'); // or navigate to receipt screen
-      } catch (error) {
-        console.error('Failed to create appointment:', error);
-        Alert.alert('Lỗi', 'Thanh toán thành công nhưng đặt lịch thất bại.');
-      }
-    };
-
-    handlePaymentSuccess();
-  }, []);
   return (
     <View style={styles.container}>
       <Image

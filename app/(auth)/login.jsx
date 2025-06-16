@@ -6,6 +6,7 @@ import axios from 'axios';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -59,21 +60,27 @@ const Login = () => {
     }
   };
 
+    useFocusEffect(
+      React.useCallback(() => {
+        // Reset animation values
+        fadeAnim.setValue(0);
+        slideAnim.setValue(50);
 
-    useEffect(() => {
-            Animated.parallel([
-              Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 1000,
-                useNativeDriver: true,
-              }),
-              Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 1000,
-                useNativeDriver: true,
-              }),
-            ]).start();
-    }, []);
+        // Start animation again
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }, [])
+    );
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
