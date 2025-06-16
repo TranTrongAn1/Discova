@@ -11,19 +11,22 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const navigation = useNavigation();
   const handleLogin = async () => {
+    if (loading) return;
     if (!email || !password) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
         text2: 'Please enter both email and password',
       });
+      
       return;
     }
-
+    setLoading(true);
     try {
       const response = await axios.post('https://kmdiscova.id.vn/api/auth/login/', {
         email,
@@ -49,7 +52,7 @@ const Login = () => {
 
       // Navigate to welcome screen
       router.push('/welcome');
-
+      setLoading(false);
     } catch (error) {
       console.log('Login error:', error.response?.data || error.message);
       Toast.show({
@@ -57,6 +60,7 @@ const Login = () => {
         text1: 'Login Failed',
         text2: error.response?.data?.message || 'Invalid credentials',
       });
+      setLoading(false);
     }
   };
 
@@ -94,8 +98,6 @@ const Login = () => {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-
-
             <Toast position="top" visibilityTime={4000} topOffset={50} />
               <TouchableOpacity
                 style={styles.backButton}
@@ -145,8 +147,8 @@ const Login = () => {
               onChangeText={setPassword}
             />
 
-            <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={() => { handleLogin() }}>
-              <Text style={styles.buttonText}>ĐĂNG NHẬP</Text>
+            <TouchableOpacity style={[styles.Button, loading && { opacity: 0.6 }, ]} activeOpacity={0.8} onPress={() => { handleLogin() }} disabled={loading}>
+              <Text style={styles.buttonText}> {loading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP'}</Text>
             </TouchableOpacity>
 
             <Text style={styles.Text3}> Quên mật khẩu ?</Text>
