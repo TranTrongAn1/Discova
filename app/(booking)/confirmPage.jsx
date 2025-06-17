@@ -34,7 +34,7 @@ const ConfirmPage = () => {
           },
         }
       );
-
+      console.log("session1123: ", data )
       const paymentResponse = await api.post(
         `/api/payments/orders/${createOrderResponse.data.order.order_id}/initiate_payment/`,
         {
@@ -49,7 +49,6 @@ const ConfirmPage = () => {
         }
       );
       const clientSecret = paymentResponse.data.payment_data.client_secret;
-      console.log(paymentResponse)
       // Step 3: Navigate to Stripe payment screen
       router.push({
         pathname: './payment1',
@@ -75,7 +74,7 @@ const ConfirmPage = () => {
 
       <View style={styles.card}>
         <Text style={styles.label}><Text style={styles.bold}>Chuyên gia: </Text>{bookingData.psychologist_name || 'N/A'}</Text>
-        <Text style={styles.label}><Text style={styles.bold}>Dịch vụ: </Text>{bookingData.session_type === 'OnlineMeeting' ? 'Tư vấn online' : 'Tư vấn trực tiếp'}</Text>
+        <Text style={styles.label}><Text style={styles.bold}>Dịch vụ: </Text>{bookingData.session_type == 'OnlineMeeting' ? 'Tư vấn online' : 'Tư vấn trực tiếp'}</Text>
         <Text style={styles.label}><Text style={styles.bold}>Thời gian: </Text>{bookingData.slotDetails?.timeRange} ngày {bookingData.slotDetails?.date}</Text>
         <Text style={styles.label}><Text style={styles.bold}>Thông tin người hẹn:</Text></Text>
         <Text style={styles.subLabel}>Họ và Tên: {bookingData.name}</Text>

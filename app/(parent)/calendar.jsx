@@ -7,18 +7,31 @@ import api from '../(auth)/api';
 import CancelModal from '../../app/cancelModal';
 import Toast from 'react-native-toast-message';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import DetailsModal from '../detailsModal'; // adjust path as needed
 
-const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
+const formatDateTimeRange = (start, end) => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
 
-  // Get day of week in Vietnamese
+  // Manually shift 7 hours for Vietnam time
+  startDate.setHours(startDate.getHours() - 7);
+  endDate.setHours(endDate.getHours() - 7);
+
   const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-  const dayOfWeek = daysOfWeek[date.getDay()];
+  const dayOfWeek = daysOfWeek[startDate.getDay()];
+  const formattedDate = `${dayOfWeek}, ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()}`;
 
-  return `${dayOfWeek}, ${day}/${month}/${year}`;
+  const formattedStartTime = startDate.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const formattedEndTime = endDate.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return `${formattedDate} từ ${formattedStartTime} đến ${formattedEndTime}`;
 };
 
 const Calendar = () => {
@@ -31,6 +44,9 @@ const Calendar = () => {
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
   const [toast, setToast] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+
   // Function to get Vietnamese day name
   const getVietnameseDayName = (dayOfWeek) => {
     const vietDayNames = [
@@ -116,16 +132,16 @@ const Calendar = () => {
       setToast(false);
     }
   };
-      useEffect(() => {
-        if (toast !== null) {
-          Toast.show({
-            type: toast ? 'success' : 'error',
-            text1: toast ? 'Hủy thành công' : 'Hủy thất bại',
-          });
-          // Reset toast state after showing
-          setToast(null);
-        }
-      }, [toast]);
+  useEffect(() => {
+    if (toast !== null) {
+      Toast.show({
+        type: toast ? 'success' : 'error',
+        text1: toast ? 'Hủy thành công' : 'Hủy thất bại',
+      });
+      // Reset toast state after showing
+      setToast(null);
+    }
+  }, [toast]);
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
 
@@ -136,7 +152,7 @@ const Calendar = () => {
           resizeMode="cover"
           imageStyle={styles.image}
         >
-          <Toast position="top" visibilityTime={4000} topOffset={50} style={styles.toastContainer}/>
+          <Toast position="top" visibilityTime={4000} topOffset={50} style={styles.toastContainer} />
           {/* Title */}
           <Text style={styles.title}>Quản lý lịch hẹn</Text>
 
@@ -203,9 +219,10 @@ const Calendar = () => {
               <View key={appointment.appointment_id || index} style={styles.appointmentCardWrapper}>
                 <View style={styles.card}>
                   <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}</Text>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDate(appointment.scheduled_start_time)} - {new Date(appointment.scheduled_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} đến {new Date(appointment.scheduled_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                  <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDateTimeRange(appointment.scheduled_start_time, appointment.scheduled_end_time)}</Text>
                   <Text style={styles.cardText}><Text style={styles.bold}>Hình thức tư vấn:</Text> {appointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : appointment.session_type}</Text>
                   <Text style={styles.cardText}><Text style={styles.bold}>Thời lượng:</Text> {appointment.duration_hours} giờ</Text>
+                  <Text style={styles.cardText}><Text style={styles.bold}>Trạng thái:</Text> {appointment.appointment_status === 'Scheduled' ? 'Đã lên lịch' : appointment.appointment_status}</Text>
                   <Text style={styles.cardText}>
                     {appointment.session_type == 'InitialConsultation' ? (
                       <>
@@ -213,16 +230,34 @@ const Calendar = () => {
                       </>
                     ) : (
                       <>
-                        <Text style={styles.bold}>Zoom Link:</Text> Pretend this is a link
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (appointment.meeting_link) {
+                              Linking.openURL(appointment.detail.meeting_link).catch(() =>
+                                Alert.alert('Invalid Link', 'Unable to open the Zoom link.')
+                              );
+                            }
+                          }}
+                        >
+                          <Text style={[styles.bold, { color: 'blue', textDecorationLine: 'underline' }]}>
+                            Zoom Link
+                          </Text>
+                        </TouchableOpacity>
                       </>
                     )}
                   </Text>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Trạng thái:</Text> {appointment.appointment_status === 'Scheduled' ? 'Đã lên lịch' : appointment.appointment_status}</Text>
                 </View>
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={styles.detailButton}>
+                  <TouchableOpacity
+                    style={styles.detailButton}
+                    onPress={() => {
+                      setSelectedAppointment(appointment);
+                      setDetailsModalVisible(true);
+                    }}
+                  >
                     <Text style={styles.detailButtonText}>CHI TIẾT</Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
                     style={styles.cancelButton}
                     onPress={() => handleCancelPress(appointment.appointment_id)}
@@ -245,7 +280,7 @@ const Calendar = () => {
               <View key={appointment.id || index} style={styles.appointmentCardWrapper}>
                 <View style={styles.card}>
                   <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}</Text>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDate(appointment.scheduled_start_time)} - {new Date(appointment.scheduled_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} đến {new Date(appointment.scheduled_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                  <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDateTimeRange(appointment.scheduled_start_time, appointment.scheduled_end_time)}</Text>
                   <Text style={styles.cardText}><Text style={styles.bold}>Hình thức tư vấn:</Text> {appointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : appointment.session_type}</Text>
                   <Text style={styles.cardText}>
                     <Text style={styles.bold}>Thời lượng:</Text> {appointment.duration_hours} giờ
@@ -284,7 +319,14 @@ const Calendar = () => {
         visible={cancelModalVisible}
         onClose={() => setCancelModalVisible(false)}
         onSubmit={handleCancelSubmit} />
+        <DetailsModal
+        visible={detailsModalVisible}
+        appointment={selectedAppointment}
+        onClose={() => setDetailsModalVisible(false)}
+      />
+
     </ScrollView>
+    
   );
 };
 
@@ -434,7 +476,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   toastContainer: {
-  zIndex: 9999,
-  elevation: 9999, // For Android
-},
+    zIndex: 9999,
+    elevation: 9999, // For Android
+  },
 });

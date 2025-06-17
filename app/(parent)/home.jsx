@@ -61,11 +61,11 @@ const formatDate = (dateString) => {
   const day = date.getDate();
   const month = date.getMonth() + 1;
   const year = date.getFullYear();
-  
+
   // Get day of week in Vietnamese
   const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
   const dayOfWeek = daysOfWeek[date.getDay()];
-  
+
   return `${dayOfWeek}, ${day}/${month}/${year}`;
 };
 
@@ -78,72 +78,72 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [nextAppointment, setNextAppointment] = useState(null);
 
-      useEffect(() => {
-        const fetchUpcomingAppointment = async () => {
-          try {
-            const token = await AsyncStorage.getItem('access_token');
-            if (!token) {
-              console.warn('No token found in storage.');
-              return;
-            }
-
-            const response = await api.get('api/appointments/upcoming/', {
-              headers: {
-                Authorization: `Token ${token}`
-              }
-            });
-
-            const upcoming = response.data.next_appointment;
-            setNextAppointment(upcoming);
-            console.log('Next appointment:', upcoming);
-          } catch (error) {
-            console.error('Failed to fetch upcoming appointment:', error);
-          }
-        };
-
-        fetchUpcomingAppointment();
-      }, []);
-
-      useEffect(() => {
-          const fetchUserName = async () => {
-          try {
-            const token = await AsyncStorage.getItem('access_token'); // Get token from storage
-            console.log('token:',token);
-                if (!token) {
-                  console.warn('No token found in storage.');
-                  return;
-                }
-
-          const response = await api.get('api/parents/profile/profile/', {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          });
-
-          const fullName = response.data.full_name;
-          setUserName(fullName);
-          console.log('User profile fetched successfully:', response.data);
-        } catch (error) {
-          console.error('Failed to fetch user profile:', error);
-        } finally {
-          setLoading(false);
+  useEffect(() => {
+    const fetchUpcomingAppointment = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found in storage.');
+          return;
         }
-      };
 
-      fetchUserName();
-    }, []);
+        const response = await api.get('api/appointments/upcoming/', {
+          headers: {
+            Authorization: `Token ${token}`
+          }
+        });
+
+        const upcoming = response.data.next_appointment;
+        setNextAppointment(upcoming);
+        console.log('Next appointment:', upcoming);
+      } catch (error) {
+        console.error('Failed to fetch upcoming appointment:', error);
+      }
+    };
+
+    fetchUpcomingAppointment();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token'); // Get token from storage
+        console.log('token:', token);
+        if (!token) {
+          console.warn('No token found in storage.');
+          return;
+        }
+
+        const response = await api.get('api/parents/profile/profile/', {
+          headers: {
+            Authorization: `Token ${token}`
+          }
+        });
+
+        const fullName = response.data.full_name;
+        setUserName(fullName);
+        console.log('User profile fetched successfully:', response.data);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserName();
+  }, []);
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
         <View style={styles.logoContainer}>
           <Image source={Logo} style={styles.logo} resizeMode='contain' />
         </View>
-        
-            <Text style={styles.text}>
-              Chào buổi sáng{userName ? `, ${userName}` : ''}
-            </Text>
 
-        
+        <Text style={styles.text}>
+          Chào buổi sáng{userName ? `, ${userName}` : ''}
+        </Text>
+
+
         <View style={styles.searchWrap}>
           <Text style={styles.searchTitle}>
             Hãy tìm chuyên gia phù hợp với con bạn
@@ -151,7 +151,7 @@ const Home = () => {
           <Text style={styles.searchSubtitle}>
             Bạn đang cần chuyên gia hỗ trợ về vấn đề gì ?
           </Text>
-          
+
           <View style={styles.searchContainer}>
             <TextInput
               placeholder="Nhập vấn đề..."
@@ -162,11 +162,11 @@ const Home = () => {
               <Text style={styles.searchButtonText}>Search</Text>
             </TouchableOpacity>
           </View>
-          
+
           <Text style={styles.problemsLabel}>
             CÁC VẤN ĐỀ PHỔ BIẾN:
           </Text>
-          
+
           <View style={styles.problemsGridContainer}>
             {problemsData.map((problem, index) => (
               <TouchableOpacity
@@ -180,7 +180,7 @@ const Home = () => {
           </View>
         </View>
         <Text style={styles.text}>Lịch hẹn sắp tới</Text>
-       {nextAppointment ? (
+        {nextAppointment ? (
           <View style={styles.appointmentContainer}>
             <View style={styles.card}>
               <Text style={styles.cardText}>
@@ -199,7 +199,27 @@ const Home = () => {
                 <Text style={styles.bold}>Thời lượng:</Text> {nextAppointment.duration_hours} giờ
               </Text>
               <Text style={styles.cardText}>
-                <Text style={styles.bold}>Địa chỉ:</Text> {nextAppointment.meeting_address}
+                {nextAppointment.session_type == 'InitialConsultation' ? (
+                  <>
+                    <Text style={styles.bold}>Địa chỉ:</Text> {nextAppointment.meeting_address}
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (nextAppointment.meeting_link) {
+                          Linking.openURL(nextAppointment.meeting_link).catch(() =>
+                            Alert.alert('Invalid Link', 'Unable to open the Zoom link.')
+                          );
+                        }
+                      }}
+                    >
+                      <Text style={[styles.bold, { color: 'blue', textDecorationLine: 'underline' }]}>
+                        Zoom Link 
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </Text>
               <Text style={styles.cardText}>
                 <Text style={styles.bold}>Trạng thái:</Text> {nextAppointment.appointment_status === 'Scheduled' ? 'Đã lên lịch' : nextAppointment.appointment_status}
@@ -212,30 +232,30 @@ const Home = () => {
 
 
       </View>
-        <Text style={styles.text}>Các chuyên gia nổi bật</Text>
+      <Text style={styles.text}>Các chuyên gia nổi bật</Text>
 
-        <View style={styles.topPsychContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {topPsychologists.map((psych, index) => (
-              <View key={index} style={styles.psychCard}>
-                <Image source={{ uri: psych.img }} style={styles.psychImage} />
-                <Text style={styles.psychName}>{psych.name}</Text>
-                <Text numberOfLines={2} style={styles.psychDescription}>{psych.des}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                  <Text>⭐ {psych.rating} ({psych.numberOfReviews})</Text>
-                </View>
-                <TouchableOpacity style={styles.bookButton}>
-                  <Text style={styles.bookButtonText}>Đặt hẹn nhanh</Text>
-                </TouchableOpacity>
+      <View style={styles.topPsychContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {topPsychologists.map((psych, index) => (
+            <View key={index} style={styles.psychCard}>
+              <Image source={{ uri: psych.img }} style={styles.psychImage} />
+              <Text style={styles.psychName}>{psych.name}</Text>
+              <Text numberOfLines={2} style={styles.psychDescription}>{psych.des}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <Text>⭐ {psych.rating} ({psych.numberOfReviews})</Text>
               </View>
-              
-            ))}
+              <TouchableOpacity style={styles.bookButton}>
+                <Text style={styles.bookButtonText}>Đặt hẹn nhanh</Text>
+              </TouchableOpacity>
+            </View>
 
-          </ScrollView>
-        </View>
-        <TouchableOpacity onPress={() => router.push('/(booking)/psychologistsList')}>
+          ))}
+
+        </ScrollView>
+      </View>
+      <TouchableOpacity onPress={() => router.push('/(booking)/psychologistsList')}>
         <Text style={styles.more}>Xem thêm chuyên gia khác </Text>
-        </TouchableOpacity>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -363,75 +383,75 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   //pyschologist styles
-topPsychContainer: {
-  marginTop: 20,
-  paddingHorizontal: 20,
-  paddingBottom: 20,
-},
+  topPsychContainer: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
 
-psychCard: {
-  backgroundColor: '#fff',
-  padding: 12,
-  borderRadius: 12,
-  marginRight: 12,
-  width: 180,
-  height: 250,
-  overflow: 'hidden',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+  psychCard: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 12,
+    width: 180,
+    height: 250,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-psychImage: {
-  width: 100,
-  height: 100,
-  borderRadius: 100,
-  marginBottom: 8,
-  alignSelf: 'center',
-  borderWidth: 1,
-},
+  psychImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 100,
+    marginBottom: 8,
+    alignSelf: 'center',
+    borderWidth: 1,
+  },
 
-psychName: {
-  fontWeight: 'bold',
-  fontSize: 13,
-  textAlign: 'center',
-  marginBottom: 4,
-  alignSelf: 'center',
-  color: '#333',
-},
+  psychName: {
+    fontWeight: 'bold',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 4,
+    alignSelf: 'center',
+    color: '#333',
+  },
 
-psychDescription: {
-  fontSize: 12,
-  color: '#555',
-  textAlign: 'center',
-  marginBottom: 8,
-  alignSelf: 'center',    
-},
-bookButton: {
-  paddingVertical: 8,
-  paddingHorizontal: 12, // Reduced from 60 to 12
-  backgroundColor: '#7B68EE',
-  borderRadius: 20,
-  marginTop: 10,
-  alignSelf: 'stretch', // Make button stretch to full width of card
-  minWidth: '100%', // Ensure full width
-},
-bookButtonText: {
-  color: '#fff',
-  fontSize: 12,
-  textAlign: 'center', 
-  fontWeight: 'bold',    
-},
-more: {
-  color: '#7B68EE',
-  fontSize: 14,
-  fontWeight: 'bold',
-  textAlign: 'center',
-  marginBottom: 20,
-},
+  psychDescription: {
+    fontSize: 12,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 8,
+    alignSelf: 'center',
+  },
+  bookButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12, // Reduced from 60 to 12
+    backgroundColor: '#7B68EE',
+    borderRadius: 20,
+    marginTop: 10,
+    alignSelf: 'stretch', // Make button stretch to full width of card
+    minWidth: '100%', // Ensure full width
+  },
+  bookButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  more: {
+    color: '#7B68EE',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
 
 });
