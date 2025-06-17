@@ -2,7 +2,6 @@ import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import React, { useEffect, useState } from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
-import api from '../(auth)/api';
 import { router } from 'expo-router';
 import axios from 'axios';
 import api from '../(auth)/api';
