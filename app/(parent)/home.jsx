@@ -5,6 +5,7 @@ import psychologists from '../(Pychologist)/pyschcologists';
 import api from '../(auth)/api';
 import { router } from 'expo-router';
 import axios from 'axios';
+import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const problemsData = [
   'Rối loạn lo âu',

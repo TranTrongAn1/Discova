@@ -1,19 +1,30 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Slot, useRouter, usePathname } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import psychologists from '../(Pychologist)/pyschcologists';
+
 const Layout = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const navItems = [
-    { name: 'calendar',label: 'Calendar', icon: 'calendar-outline' },
-    { name: 'mess',label: 'Mess', icon: 'chatbox-ellipses-outline' },
-    { name: 'client',label: 'Client', icon: 'people-outline' },
-    { name: 'workInfo',label: 'Profile', icon: 'person-outline' },
+    { name: 'calendar', label: 'Calendar', icon: 'calendar-outline' },
+    { name: 'mess', label: 'Mess', icon: 'chatbox-ellipses-outline' },
+    { name: 'client', label: 'Client', icon: 'people-outline' },
+    { name: 'workInfo', label: 'Profile', icon: 'person-outline' },
   ];
-const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('token');
+      router.replace('/login');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to logout. Please try again.');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -22,31 +33,44 @@ const [menuOpen, setMenuOpen] = useState(false);
         <TouchableOpacity onPress={() => setMenuOpen((prev) => !prev)}>
           <Ionicons name="menu" size={24} color="#333" />
         </TouchableOpacity>
+
         <View style={styles.rightIcons}>
           <Ionicons name="search" size={22} color="#333" style={styles.icon} />
           <Ionicons name="notifications-outline" size={22} color="#333" style={styles.icon} />
-            <TouchableOpacity onPress={() => router.push('/profile')}>
-              <Image
-                source={{ uri: psychologists[0].img }}
-                resizeMode="cover"
-                style={styles.avatar}
-              />
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/profile')}>
+            <Image
+              source={{ uri: psychologists[0].img }}
+              resizeMode="cover"
+              style={styles.avatar}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
+      {/* Dropdown Menu */}
       {menuOpen && (
         <View style={styles.dropdown}>
-          <TouchableOpacity onPress={() => {
-            setMenuOpen(false);
-            router.push('/review'); // Replace with your actual review route
-          }}>
+          <TouchableOpacity
+            onPress={() => {
+              setMenuOpen(false);
+              router.push('/review');
+            }}
+          >
             <Text style={styles.dropdownItem}>Review</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setMenuOpen(false);
+              handleLogout();
+            }}
+          >
+            <Text style={styles.dropdownItem}>Logout</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Top Navigation */}
+      {/* Top Navigation Tabs */}
       <View style={styles.navRow}>
         {navItems.map((item) => {
           const isActive = pathname.includes(item.name);
@@ -69,9 +93,9 @@ const [menuOpen, setMenuOpen] = useState(false);
         })}
       </View>
 
-      {/* Current Screen Content */}
+      {/* Main Screen Content */}
       <View style={{ flex: 1 }}>
-        <Slot /> {/* This will render the current route’s screen */}
+        <Slot />
       </View>
     </View>
   );
@@ -127,26 +151,25 @@ const styles = StyleSheet.create({
     borderColor: '#000',
   },
   dropdown: {
-  position: 'absolute',
-  top: 90,
-  left: 16,
-  backgroundColor: '#fff',
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 6,
-  zIndex: 10,
-  padding: 8,
-  elevation: 4, // Android shadow
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.2,
-  shadowRadius: 4,
-},
-dropdownItem: {
-  paddingVertical: 8,
-  paddingHorizontal: 16,
-  fontSize: 14,
-  color: '#333',
-},
-
+    position: 'absolute',
+    top: 90,
+    left: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    zIndex: 10,
+    padding: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  dropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: '#333',
+  },
 });
