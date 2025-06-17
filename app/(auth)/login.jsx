@@ -17,6 +17,7 @@ const Login = () => {
   const navigation = useNavigation();
   const handleLogin = async () => {
     if (loading) return;
+
     if (!email || !password) {
       Toast.show({
         type: 'error',
@@ -29,6 +30,7 @@ const Login = () => {
     setLoading(true);
     try {
       const response = await axios.post('https://kmdiscova.id.vn/api/auth/login/', {
+
         email,
         password,
       });
@@ -53,6 +55,7 @@ const Login = () => {
       // Navigate to welcome screen
       router.push('/welcome');
       setLoading(false);
+
     } catch (error) {
       console.log('Login error:', error.response?.data || error.message);
       Toast.show({
@@ -60,6 +63,7 @@ const Login = () => {
         text1: 'Login Failed',
         text2: error.response?.data?.message || 'Invalid credentials',
       });
+
       setLoading(false);
     }
   };
@@ -163,6 +167,7 @@ const Login = () => {
         </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
+
   );
 };
 
@@ -222,7 +227,7 @@ const styles = StyleSheet.create({
     paddingVertical: 25,
     paddingHorizontal: 20,
     marginTop: 20,
-    width: SCREEN_WIDTH - 70, // Adjust width as needed
+    width: SCREEN_WIDTH - 70,
     alignSelf: 'center',
   },
   buttonText: {

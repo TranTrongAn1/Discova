@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, Text, View, Image, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios'; 
+import axios from 'axios';
+import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const PsychologistDetails = () => {
   const { id } = useLocalSearchParams(); // get id from route
@@ -20,6 +21,7 @@ useEffect(() => {
           return;
         }
         const res = await axios.get(`https://kmdiscova.id.vn/api/psychologists/marketplace/${id}/`,{
+
           headers: {
               Authorization: `Token ${token}`,
             },});

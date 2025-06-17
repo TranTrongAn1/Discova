@@ -5,6 +5,7 @@ import psychologists from '../(Pychologist)/pyschcologists';
 import api from '../(auth)/api';
 import { router } from 'expo-router';
 import axios from 'axios';
+import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const problemsData = [
   'Rối loạn lo âu',
@@ -113,8 +114,9 @@ const Home = () => {
                   console.warn('No token found in storage.');
                   return;
                 }
-
+            
           const response = await api.get('api/parents/profile/profile/', {
+
             headers: {
               Authorization: `Token ${token}`
             }
