@@ -195,6 +195,7 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
                      appointmentDetails.session_type === 'OnlineMeeting' ? 'Tư vấn trực tuyến' : 
                      appointmentDetails.session_type}
                   </Text>
+                                
                 </View>
 
                 {/* Meeting Info Card */}
@@ -214,7 +215,7 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
                   </View>
                 )}
 
-                {appointmentDetails.session_type === 'InPersonMeeting' && (
+                {appointmentDetails.session_type === 'InitialConsultation' && (
                   <View style={styles.card}>
                     <View style={styles.cardHeader}>
                       <Feather name="map-pin" size={20} color="#7B68EE" />

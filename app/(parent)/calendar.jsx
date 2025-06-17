@@ -292,7 +292,7 @@ const Calendar = () => {
                       </>
                     ) : (
                       <>
-                        <Text style={styles.bold}>Zoom Link:</Text> Pretend this is a link
+                        <Text style={styles.bold}>Zoom Link:</Text> is on the details
                       </>
                     )}
                   </Text>
@@ -301,7 +301,13 @@ const Calendar = () => {
                   </Text>
                 </View>
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={styles.detailButton}>
+                  <TouchableOpacity
+                    style={styles.detailButton}
+                    onPress={() => {
+                      setSelectedAppointment(appointment);
+                      setDetailsModalVisible(true);
+                    }}
+                  >
                     <Text style={styles.detailButtonText}>CHI TIẾT</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.reviewButton}>
