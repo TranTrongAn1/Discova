@@ -8,111 +8,69 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Animated
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../(auth)/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const Register = () => {
-  const [email, setEmail] = useState('');
+const Register = ({ onSwitch }) => {
+  const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
   const [agreePolicy, setAgreePolicy] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [showPwd1, setShowPwd1] = useState(false);
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [userType, setUserType] = useState('Parent'); // Default value
-  const [userTimezone, setUserTimezone] = useState('UTC'); // Default timezone
+  const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
 
-  const handleRegister = async () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
 
-    if (!email || !password || !passwordConfirm) {
-      Toast.show({
-        type: 'error',
-        text1: 'Vui lòng điền đầy đủ thông tin',
-      });
-      return;
-    }
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
-    if (!emailRegex.test(email)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Email không hợp lệ',
-      });
-      return;
-    }
-
-    if (password.length < 6) {
-      Toast.show({
-        type: 'error',
-        text1: 'Mật khẩu phải có ít nhất 6 ký tự',
-      });
-      return;
-    }
-
-    if (password !== passwordConfirm) {
-      Toast.show({
-        type: 'error',
-        text1: 'Mật khẩu không khớp',
-      });
-      return;
-    }
-
-    if (!agreePolicy) {
-      Toast.show({
-        type: 'error',
-        text1: 'Bạn cần đồng ý với chính sách quyền riêng tư',
-      });
-      return;
-    }
-
-    const payload = {
-      email,
-      password,
-      password_confirm: passwordConfirm,
-      user_type: userType,
-      user_timezone: userTimezone,
-    };
-
-    try {
-      const { data } = await api.post('api/auth/register/', payload);
-
-      Toast.show({
-        type: 'success',
-        text1: 'Đăng ký thành công!',
-      });
-      router.replace('/login');
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        'Đăng ký thất bại!';
-
-      Toast.show({
-        type: 'error',
-        text1: message,
-      });
-    }
-  };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, backgroundColor:'#fff' }}
+        >
+    {/* scroll in case content is still taller than screen */}
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateX: slideAnim }],
+        }}
       >
-        <View style={styles.container}>
-          <Toast position="top" visibilityTime={4000} topOffset={50} />
-          <TouchableOpacity style={styles.backButton} onPress={router.back}>
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
+
+      <Toast />
+     <TouchableOpacity style={styles.backButton} onPress={router.back}>
+        <Ionicons name="arrow-back" size={24} color="black" />
+     </TouchableOpacity>
+
+
+      <Text style={styles.Welcome}>Tạo Tài Khoản</Text>
 
           <Text style={styles.Welcome}>Tạo Tài Khoản</Text>
 
@@ -233,11 +191,12 @@ const Register = () => {
             activeOpacity={0.8}
             onPress={handleRegister}
           >
-            <Text style={styles.buttonText}>BẮT ĐẦU</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Text style={styles.buttonText}>BẮT ĐẦU</Text>
+      </TouchableOpacity>
+    </Animated.View>
+        </ScrollView>
+  </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 

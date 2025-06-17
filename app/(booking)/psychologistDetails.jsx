@@ -20,7 +20,8 @@ useEffect(() => {
           console.warn('No token found');
           return;
         }
-        const res = await api.get(`/api/psychologists/marketplace/${id}/`,{
+        const res = await axios.get(`https://kmdiscova.id.vn/api/psychologists/marketplace/${id}/`,{
+
           headers: {
               Authorization: `Token ${token}`,
             },});
@@ -87,7 +88,7 @@ useEffect(() => {
       onPress={() =>
         router.push({
           pathname: '/bookingPage',
-          params: { id: user, type: 'offline' },
+          params: { id: `${id}`, type: 'offline' },
         })
       }
     >
@@ -101,7 +102,7 @@ useEffect(() => {
       onPress={() =>
         router.push({
           pathname: '/bookingPage',
-          params: { id: user, type: 'online' },
+          params: { id: `${id}`, type: 'online' },
         })
       }
     >

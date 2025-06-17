@@ -2,6 +2,8 @@ import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 import { Stack } from 'expo-router'
 import { LogBox } from 'react-native';
+// import { StripeProvider } from '@stripe/stripe-react-native';
+import 'react-native-gesture-handler';
 
 LogBox.ignoreLogs([
   'Text strings must be rendered within a <Text> component',

@@ -2,6 +2,7 @@ import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import React, { useEffect, useState } from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
+import api from '../(auth)/api';
 import { router } from 'expo-router';
 import axios from 'axios';
 import api from '../(auth)/api';
@@ -76,6 +77,34 @@ const upcomingAppointments = allAppointments
 const Home = () => {
   const [userName, setUserName] = useState(null); // default is null
   const [loading, setLoading] = useState(true);
+  const [nextAppointment, setNextAppointment] = useState(null);
+
+      useEffect(() => {
+        const fetchUpcomingAppointment = async () => {
+          try {
+            const token = await AsyncStorage.getItem('access_token');
+            if (!token) {
+              console.warn('No token found in storage.');
+              return;
+            }
+
+            const response = await api.get('api/appointments/upcoming/', {
+              headers: {
+                Authorization: `Token ${token}`
+              }
+            });
+
+            const upcoming = response.data.next_appointment;
+            setNextAppointment(upcoming);
+            console.log('Next appointment:', upcoming);
+          } catch (error) {
+            console.error('Failed to fetch upcoming appointment:', error);
+          }
+        };
+
+        fetchUpcomingAppointment();
+      }, []);
+
       useEffect(() => {
           const fetchUserName = async () => {
           try {
@@ -85,8 +114,9 @@ const Home = () => {
                   console.warn('No token found in storage.');
                   return;
                 }
+            
+          const response = await api.get('api/parents/profile/profile/', {
 
-          const response = await api.get('/api/parents/profile/profile/', {
             headers: {
               Authorization: `Token ${token}`
             }
@@ -151,30 +181,38 @@ const Home = () => {
             ))}
           </View>
         </View>
-        
-        <Text style={styles.text}>Lịch hẹn sắp tới của bạn</Text>
-        
-        {upcomingAppointments.length > 0 && (
+        <Text style={styles.text}>Lịch hẹn sắp tới</Text>
+       {nextAppointment ? (
           <View style={styles.appointmentContainer}>
             <View style={styles.card}>
               <Text style={styles.cardText}>
-                <Text style={styles.bold}>Chuyên gia:</Text> {upcomingAppointments[0].expert}
+                <Text style={styles.bold}>Ngày & giờ:</Text> {formatDate(nextAppointment.scheduled_start_time)} - {new Date(nextAppointment.scheduled_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} đến {new Date(nextAppointment.scheduled_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
               <Text style={styles.cardText}>
-                <Text style={styles.bold}>Dịch vụ:</Text> {upcomingAppointments[0].service}
+                <Text style={styles.bold}>Người được tư vấn:</Text> {nextAppointment.child_name}
               </Text>
               <Text style={styles.cardText}>
-                <Text style={styles.bold}>Thời gian:</Text> {upcomingAppointments[0].time} {formatDate(upcomingAppointments[0].date)}
+                <Text style={styles.bold}>Chuyên gia:</Text> {nextAppointment.psychologist_name}
               </Text>
               <Text style={styles.cardText}>
-                <Text style={styles.bold}>Thông tin người hẹn:</Text>
+                <Text style={styles.bold}>Hình thức tư vấn:</Text> {nextAppointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : nextAppointment.session_type}
               </Text>
-              <Text style={styles.cardText}>{upcomingAppointments[0].user.name}</Text>
-              <Text style={styles.cardText}>{upcomingAppointments[0].user.phone}</Text>
-              <Text style={styles.cardText}>{upcomingAppointments[0].user.email}</Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Thời lượng:</Text> {nextAppointment.duration_hours} giờ
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Địa chỉ:</Text> {nextAppointment.meeting_address}
+              </Text>
+              <Text style={styles.cardText}>
+                <Text style={styles.bold}>Trạng thái:</Text> {nextAppointment.appointment_status === 'Scheduled' ? 'Đã lên lịch' : nextAppointment.appointment_status}
+              </Text>
             </View>
           </View>
+        ) : (
+          <Text style={[styles.cardText, { marginLeft: 20 }]}>Không có lịch hẹn sắp tới.</Text>
         )}
+
+
       </View>
         <Text style={styles.text}>Các chuyên gia nổi bật</Text>
 

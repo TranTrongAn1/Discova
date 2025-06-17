@@ -9,11 +9,6 @@ const settingsOptions = [
   { label: 'Thông tin cơ bản', route: 'info' },
   { label: 'Hồ sơ của bé', route: 'childRecord' },
   { label: 'Thông tin đặt lịch', route: 'bookingInfo' },
-  { label: 'Cài đặt tài khoản', route: 'AccountSettings' },
-  { label: 'Cộng đồng và bài đăng', route: 'CommunityPosts' },
-  { label: 'Giao diện', route: 'Appearance' },
-  { label: 'Ngôn ngữ', route: 'Language' },
-  { label: 'Quyền & Bảo mật', route: 'PrivacySecurity' },
 ];
 const Profile = () => {
   return (

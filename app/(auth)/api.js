@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const api = axios.create({
-  baseURL: 'https://kmdiscova.id.vn', // Adjust this if needed
+  baseURL: 'https://kmdiscova.id.vn/', // base path
 });
 
 // Add request interceptor to include token

@@ -1,113 +1,285 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import React from 'react'
-const childInfo = {
-  name: 'Nguyễn Văn A',
-  dateOfBirth: '01/01/2020',
-  gender: 'Nam',
-  nickname: 'Bé A',
-  height: '100 cm',
-  weight: '15 kg',
-  healthStatus: 'Khỏe mạnh',  
-  medicalHistory: 'Không có',
-  vaccinationStatus: 'Đã tiêm chủng đầy đủ',
-  question: ["Bé có biết đi chưa?", "Bé có biết nói chưa?", "Bé có biết tự ăn chưa?"],
-  answer: ["Bé đã biết đi", "Bé đã biết nói", "Bé có thể tự ăn một số món đơn giản"],
-}
-const childRecord = () => {
-  return (
-  <ScrollView contentContainerStyle={styles.scrollContainer}>
-    <View style={styles.container}>
-      <Text style={styles.text}>Hồ sơ của bé</Text>
-      <Text style={styles.text1}>Thông tin cá nhân</Text>
-      <View style={styles.infoContainer}>
-      <Text style={styles.label}>
-        <Text style={styles.info}>Họ và tên: </Text> {childInfo.name}
-      </Text>
-       <Text style={styles.label}>
-        <Text style={styles.info}>Ngày Sinh: </Text> {childInfo.dateOfBirth}
-        </Text>
-        <Text style={styles.label}>
-        <Text style={styles.info}>Giới tính:</Text> {childInfo.gender}
-        </Text>
-        <Text style={styles.label}>
-        <Text style={styles.info}>Tên gọi ở nhà: </Text> {childInfo.nickname}
-        </Text>
-      </View>
-      <Text style={styles.text1}>Thông tin sức khoẻ & phát triển</Text>
-      <View style={styles.infoContainer}>
-      <Text style={styles.label}>
-        <Text style={styles.info}>Chiều cao, cân nặng: </Text> {childInfo.height} - {childInfo.weight}
-      </Text>
-       <Text style={styles.label}>
-        <Text style={styles.info}>Tình trạng sức khỏe chung: </Text> {childInfo.healthStatus}
-        </Text>
-        <Text style={styles.label}>
-        <Text style={styles.info}>Tiền sử bệnh lý:</Text> {childInfo.medicalHistory}
-        </Text>
-        <Text style={styles.label}>
-        <Text style={styles.info}>Tiêm chủng đầy đủ chưa?: </Text> {childInfo.vaccinationStatus}
-        </Text>
-      </View>
-       <Text style={styles.text1}>Hành vi & phát triển tâm lý</Text>
-      <View style={styles.infoContainer}>
-          {childInfo.question.map((question, index) => (
-            <View key={index} style={{ marginBottom: 10 }}>
-              <Text style={styles.info}>Câu hỏi: {question}</Text>
-              <Text style={styles.label}>Trả lời: {childInfo.answer[index]}</Text>
-            </View>
-          ))}
-      </View>
-    </View>
-  </ScrollView>
-  )
-}
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import api from '../../(auth)/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+const SubmitChildProfile = () => {
+  const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
+    nickname: '',
+    gender: '',
+    date_of_birth: '',
+    height_cm: '',
+    weight_kg: '',
+    health_status: '',
+    medical_history: '',
+    vaccination_status: false,
+    emotional_issues: '',
+    social_behavior: '',
+    developmental_concerns: '',
+    family_peer_relationship: '',
+    has_seen_psychologist: false,
+    has_received_therapy: false,
+    parental_goals: '',
+    activity_tips: '',
+    parental_notes: '',
+    primary_language: '',
+    school_grade_level: '',
+    profile_picture_url: '',
+    consent_forms_signed: {},
+  });
 
-export default childRecord
+  const [mode, setMode] = useState('view'); // 'view' | 'edit' | 'create'
+  const [childId, setChildId] = useState(null);
+  const pickImageAndUpload = async () => {
+  const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (permissionResult.status !== 'granted') {
+    Alert.alert('Permission required', 'Please allow access to your media library');
+    return;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    aspect: [4, 4],
+    quality: 1,
+  });
+
+  if (!result.canceled) {
+    const image = result.assets[0];
+    const formData = new FormData();
+    formData.append('file', {
+      uri: image.uri,
+      name: 'profile.jpg',
+      type: 'image/jpeg',
+    });
+    formData.append('upload_preset', 'converts'); // Use your Cloudinary preset
+
+    try {
+      const res = await fetch('https://api.cloudinary.com/v1_1/du7snch3r/image/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      setForm((prev) => ({ ...prev, profile_picture_url: data.secure_url }));
+      Alert.alert('✅ Tải ảnh thành công');
+    } catch (err) {
+      console.error('Upload failed:', err);
+      Alert.alert('❌ Lỗi', 'Tải ảnh thất bại');
+    }
+  }
+};
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found');
+          return;
+        }
+        const res = await api.get(`/api/children/profile/my_children/`, {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        });
+        if (res.data.count > 0 && res.data.children.length > 0) {
+          const child = res.data.children[0];
+          setForm(child);
+          setChildId(child.id);
+          setMode('view');
+        } else {
+          setMode('create');
+        }
+      } catch (err) {
+        console.error(err);
+        setMode('create');
+      }
+    };
+    fetchProfile();
+  }, []);
+
+
+  const handleChange = (key, value) => {
+    setForm({ ...form, [key]: value });
+  };
+        const handleSubmit = async () => {
+        try {
+          const token = await AsyncStorage.getItem('access_token');
+          if (!token) {
+            console.warn('No token found');
+            return;
+          }
+
+          const payload = { ...form };
+
+          if (mode === 'edit') {
+            await api.patch(`/api/children/profile/${childId}/`, payload, {
+              headers: {
+                Authorization: `Token ${token}`,
+              },
+            });
+            Alert.alert('Thành công', 'Đã cập nhật hồ sơ.');
+            setMode('view');
+          } else {
+            await api.post('/api/children/profile/', payload, {
+              headers: {
+                Authorization: `Token ${token}`,
+              },
+            });
+            Alert.alert('Thành công', 'Hồ sơ đã được tạo!');
+            setMode('view');
+          }
+        } catch (error) {
+          console.error(error);
+          Alert.alert('Lỗi', 'Không thể gửi hồ sơ.');
+        }
+      };
+
+        const renderField = (label, key, isNumeric = false, isBool = false) => {
+        let displayLabel = label;
+        if (key === 'date_of_birth') {
+          displayLabel += ' (YYYY-MM-DD)';  // Add format hint to label
+        }
+        if (mode === 'view') {
+          return (
+            <View style={styles.readOnlyField}>
+              <Text style={styles.label}>{displayLabel}</Text>
+              <Text style={styles.value}>{form[key]?.toString() || '—'}</Text>
+            </View>
+          );
+        }
+        return (
+          <>
+            <Text style={styles.label}>{displayLabel}</Text>
+            <TextInput
+              style={styles.input}
+              value={form[key]?.toString()}
+              onChangeText={(text) => {
+                // Remove special formatting for date_of_birth
+                handleChange(key, isBool ? text === 'true' : isNumeric ? Number(text) : text);
+              }}
+              keyboardType={isNumeric ? 'numeric' : 'default'}
+              placeholder={key === 'date_of_birth' ? 'YYYY-MM-DD' : ''}
+            />
+          </>
+        );
+      };
+
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>
+        {mode === 'view' ? 'Hồ sơ của bé' : mode === 'edit' ? 'Chỉnh sửa hồ sơ' : 'Tạo hồ sơ cho bé'}
+      </Text>
+
+      <View style={styles.formGroup}>
+        {renderField('Họ', 'first_name')}
+        {renderField('Tên', 'last_name')}
+        {renderField('Tên gọi ở nhà', 'nickname')}
+        {renderField('Giới tính', 'gender')}
+        {renderField('Ngày sinh', 'date_of_birth')}
+        {renderField('Chiều cao (cm)', 'height_cm', true)}
+        {renderField('Cân nặng (kg)', 'weight_kg', true)}
+        {renderField('Tình trạng sức khỏe', 'health_status')}
+        {renderField('Tiền sử bệnh lý', 'medical_history')}
+        {renderField('Vấn đề cảm xúc', 'emotional_issues')}
+        {renderField('Hành vi xã hội', 'social_behavior')}
+        {renderField('Quan ngại phát triển', 'developmental_concerns')}
+        {renderField('Quan hệ với gia đình/bạn bè', 'family_peer_relationship')}
+        {renderField('Mục tiêu của phụ huynh', 'parental_goals')}
+        {renderField('Gợi ý hoạt động', 'activity_tips')}
+        {renderField('Ghi chú khác', 'parental_notes')}
+        {renderField('Ngôn ngữ chính', 'primary_language')}
+        {renderField('Cấp học hiện tại', 'school_grade_level')}
+      </View>
+      <TouchableOpacity style={styles.buttonOutline} onPress={pickImageAndUpload}>
+        <Text style={styles.buttonOutlineText}>Chọn ảnh hồ sơ</Text>
+      </TouchableOpacity>
+
+      {form.profile_picture_url ? (
+        <Image
+          source={{ uri: form.profile_picture_url }}
+          style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 10 }}
+        />
+      ) : null}
+
+      {mode === 'view' ? (
+        <TouchableOpacity style={styles.buttonOutline} onPress={() => setMode('edit')}>
+          <Text style={styles.buttonOutlineText}>Chỉnh sửa</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+          <Text style={styles.buttonText}>Lưu</Text>
+        </TouchableOpacity>
+      )}
+    </ScrollView>
+  );
+};
+
+export default SubmitChildProfile;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    paddingTop: 50,
-    paddingHorizontal: 20,
+    padding: 20,
+    paddingBottom: 60,
     backgroundColor: '#fff',
   },
-    scrollContainer: {
-      paddingBottom: 40, // So nothing is cut off at the bottom
-      backgroundColor: '#fff',
-    },
-  text: {
-    fontSize: 30,
+  title: {
+    fontSize: 26,
     fontWeight: 'bold',
-    color: '#333',
-    marginLeft: 10,
-  },
-  text1: {
-    fontSize: 20,
-    color: '#A1A4B2',
-    marginLeft: 10,
-    marginTop: 20,
-    fontWeight: 'italic',
-    fontFamliy: 'Helvetica Neue',
-  },
-  info: {
-    fontSize: 14,
-    color: '#333',
-    marginVertical: 5,
-    fontWeight: 'bold',
-    marginLeft: 10,
-
-  },
-  infoContainer: {
-    marginLeft: 10,
-    marginTop: 10,
-    padding: 20,
-    marginRight: 10,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 10,
-  },
-  label: {
-    fontFamily: 'Helvetica Neue',
     marginBottom: 20,
     color: '#333',
   },
-})
+  formGroup: {
+    marginBottom: 30,
+  },
+  label: {
+    fontWeight: '600',
+    marginBottom: 5,
+    color: '#555',
+  },
+  value: {
+    fontSize: 14,
+    paddingVertical: 4,
+    marginBottom: 12,
+    color: '#333',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 15,
+    fontSize: 14,
+    backgroundColor: '#f9f9f9',
+  },
+  readOnlyField: {
+    marginBottom: 12,
+  },
+  button: {
+    marginTop: 20,
+    backgroundColor: '#5DB075',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  buttonOutline: {
+    marginTop: 20,
+    borderColor: '#5DB075',
+    borderWidth: 1,
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  buttonOutlineText: {
+    color: '#5DB075',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});

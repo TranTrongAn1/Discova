@@ -18,7 +18,7 @@ const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/70x70.png?text=Avatar';
 const PsychologistsList = () => {
   const router = useRouter();
   const [data, setData] = useState([]);
-  const [nextUrl, setNextUrl] = useState('http://kmdiscova.id.vn/api/psychologists/marketplace/');
+  const [nextUrl, setNextUrl] = useState('https://kmdiscova.id.vn/api/psychologists/marketplace/');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

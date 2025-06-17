@@ -1,17 +1,16 @@
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router,useLocalSearchParams} from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert,
 } from 'react-native';
+import api from '../(auth)/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const timeSlots = [
-  '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
-  '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00',
-];
+// Inside your component
 
-const days = ['Thứ 2', 'Thứ 3', 'Thứ 5', 'Thứ 7'];
 
 const BookingPage = () => {
+  const [availableSlots, setAvailableSlots] = useState({});
   const [selectedSlots, setSelectedSlots] = useState({});
   const [mode, setMode] = useState('Online');
   const [specialRequest, setSpecialRequest] = useState('');
@@ -19,137 +18,333 @@ const BookingPage = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [notify, setNotify] = useState('Có');
+  const [PsyName, SetpsyName] = useState('');
+  const { id, type } = useLocalSearchParams(); // ✅ get passed parameters
+  const psychologistId = id; // ✅ dynamic psychologist ID
+    const [childId, setChildId] = useState('');
+// Validation error states
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [nameError, setNameError] = useState('');
 
-  const toggleSlot = (day, time) => {
-    const key = `${day}-${time}`;
-    setSelectedSlots((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  // Email validation function
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
-const handleSubmit = () => {
-  if (!name || !phone || !email || Object.values(selectedSlots).every((v) => !v)) {
-    Alert.alert('Thông báo', 'Vui lòng điền đầy đủ thông tin và chọn ít nhất một khung giờ.');
-    return;
-  }
+  // Phone validation function (Vietnam phone numbers)
+  const validatePhone = (phone) => {
+    // Remove all spaces and special characters
+    const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
+    
+    // Vietnam phone number patterns:
+    // Mobile: 03x, 05x, 07x, 08x, 09x (10 digits total)
+    // Or with country code: +84 or 84 (11-12 digits total)
+    const phoneRegex = /^(\+84|84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+    
+    return phoneRegex.test(cleanPhone);
+  };
 
-  Alert.alert(
-    'Xác nhận đặt lịch',
-    'Bạn sẽ được chuyển đến trang thanh toán.',
-    [
-      {
-        text: 'Hủy',
-        style: 'cancel',
-      },
-      {
-        text: 'Đồng ý',
-        onPress: () => {
-          // You can store the booking data using state management, context, or pass via route if needed
-          router.push('/confirmPage');
-        },
-      },
-    ]
-  );
+  // Handle email input change with validation
+  const handleEmailChange = (text) => {
+    setEmail(text);
+    if (text.trim() === '') {
+      setEmailError('');
+    } else if (!validateEmail(text)) {
+      setEmailError('Email không hợp lệ');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  // Handle phone input change with validation
+  const handlePhoneChange = (text) => {
+    setPhone(text);
+    if (text.trim() === '') {
+      setPhoneError('');
+    } else if (!validatePhone(text)) {
+      setPhoneError('Số điện thoại không hợp lệ');
+    } else {
+      setPhoneError('');
+    }
+  };
+
+  // Handle name input change with validation
+  const handleNameChange = (text) => {
+    setName(text);
+    if (text.trim() === '') {
+      setNameError('Vui lòng nhập họ và tên');
+    } else if (text.trim().length < 2) {
+      setNameError('Họ và tên phải có ít nhất 2 ký tự');
+    } else {
+      setNameError('');
+    }
+  };
+
+  // Validate all fields before submission
+  const validateAllFields = () => {
+    let isValid = true;
+
+    // Validate name
+    if (name.trim() === '') {
+      setNameError('Vui lòng nhập họ và tên');
+      isValid = false;
+    } else if (name.trim().length < 2) {
+      setNameError('Họ và tên phải có ít nhất 2 ký tự');
+      isValid = false;
+    }
+
+    // Validate phone
+    if (phone.trim() === '') {
+      setPhoneError('Vui lòng nhập số điện thoại');
+      isValid = false;
+    } else if (!validatePhone(phone)) {
+      setPhoneError('Số điện thoại không hợp lệ');
+      isValid = false;
+    }
+
+    // Validate email
+    if (email.trim() === '') {
+      setEmailError('Vui lòng nhập email');
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      setEmailError('Email không hợp lệ');
+      isValid = false;
+    }
+
+    return isValid;
+  };
+    const fetchProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          console.warn('No token found');
+          return;
+        }
+        
+        const res = await api.get(`/api/children/profile/my_children/`, {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        });
+        if (res.data.count > 0 && res.data.children.length > 0) {
+          const child = res.data.children[0];
+          setChildId(child.id);
+          setMode('view');
+        } else {
+          setMode('create');
+        }
+      } catch (err) {
+        console.error(err);
+        setMode('create');
+      }
+    };
+
+
+      const fetchAvailableSlots = async () => {
+        const today = new Date();
+        const dateFrom = today.toISOString().split('T')[0];
+        const dateTo = new Date(today.setDate(today.getDate() + 30)).toISOString().split('T')[0];
+        try {
+          const token = await AsyncStorage.getItem('access_token');
+          if (!token) {
+            console.warn('No token found');
+            return;
+          }
+          const response = await api.get(
+            `/api/appointments/slots/available_for_booking/?psychologist_id=${psychologistId}&session_type=${mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation'}&date_from=${dateFrom}&date_to=${dateTo}`,
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+              },
+            }
+          );
+          const data = response.data;
+          SetpsyName(response.data.psychologist_name)
+          if (!data.available_slots || data.available_slots.length === 0) {
+            setAvailableSlots(null); // <-- no slots available
+            return;
+          }
+          const grouped = {};
+          data.available_slots.forEach(slot => {
+            const key = slot.date; 
+            const timeRange = `${slot.start_time}-${slot.end_time}`;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push({ ...slot, timeRange });
+          });
+          setAvailableSlots(grouped);
+        } catch (error) {
+          console.error('Failed to fetch slots:', error);
+          setAvailableSlots('error'); // <-- distinguish error
+        }
+      };
+        useEffect(() => {
+          fetchAvailableSlots();
+          fetchProfile();
+        }, [mode]);
+
+        const toggleSlot = (slot) => {
+          setSelectedSlots((prev) => {
+            const newSelected = { ...prev };
+            if (newSelected[slot.slot_id]) {
+              delete newSelected[slot.slot_id];
+            } else {
+              newSelected[slot.slot_id] = slot;
+            }
+            return newSelected;
+          });
+        };
+
+      const handleSubmit = async () => {
+        if (!validateAllFields()) {
+      return;
+    }
+      if (!name || !phone || !email || Object.values(selectedSlots).every((v) => !v)) {
+        Alert.alert('Thông báo', 'Vui lòng điền đầy đủ thông tin và chọn ít nhất một khung giờ.');
+        return;
+      }
+
+      const selectedSlotIds = Object.keys(selectedSlots);
+        if (selectedSlotIds.length === 0) {
+          Alert.alert('Lỗi', 'Không tìm thấy khung giờ đã chọn.');
+          return;
+        }
+        const selectedSlotId = selectedSlotIds[0];
+        const selectedSlotObj = selectedSlots[selectedSlotId];
+
+
+      try {
+
+        const bookingInfo = {
+          childId: childId,
+          psychologistId: id,
+          psychologist_name: PsyName,
+          session_type: mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation',
+          start_slot_id: selectedSlotId,
+          parent_notes: specialRequest,
+          name,
+          phone,
+          email,
+          notify,
+          slotDetails: selectedSlotObj,
+        };
+
+        // ✅ Navigate to confirmPage with bookingInfo
+        router.push({
+          pathname: '/confirmPage',
+          params: { data: JSON.stringify(bookingInfo) },
+        });
+      } catch (err) {
+        console.error('Error reading child_id from AsyncStorage:', err);
+        Alert.alert('Lỗi', 'Đã xảy ra lỗi khi lấy thông tin trẻ.');
+      }
 };
 
 
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Bạn muốn tư vấn vào khung giờ nào?</Text>
+return (
+  <ScrollView style={styles.container}>
+    <Text style={styles.title}>Bạn muốn tư vấn vào khung giờ nào?</Text>
 
-      {days.map((day) => (
-        <View key={day} style={styles.dayBlock}>
-          <Text style={styles.dayLabel}>{day}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {timeSlots.map((time) => {
-              const isSelected = selectedSlots[`${day}-${time}`];
-              return (
-                <TouchableOpacity
-                  key={`${day}-${time}`}
-                  style={[styles.slot, isSelected && styles.slotSelected]}
-                  onPress={() => toggleSlot(day, time)}
-                >
-                  <Text style={[styles.slotText, isSelected && { color: '#fff' }]}>{time}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+    {typeof availableSlots === 'string' && availableSlots === 'error' ? (
+      <Text style={{ color: 'red' }}>Đã xảy ra lỗi khi tải khung giờ. Vui lòng thử lại sau.</Text>
+    ) : !availableSlots || Object.keys(availableSlots).length === 0 ? (
+      <Text style={{ color: '#666' }}>Chuyên gia này hiện chưa có khung giờ khả dụng.</Text>
+    ) : (
+      Object.entries(availableSlots).map(([day, slots]) => {
+        // Here is where you define dayLabel:
+        const dayLabel = new Date(day).toLocaleDateString('vi-VN', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'numeric',
+        });
+
+        return (
+          <View key={day} style={styles.dayBlock}>
+            <Text style={styles.dayLabel}>{dayLabel}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {Array.isArray(slots) &&
+                slots.map((slot) => {
+                  const key = `${day}-${slot.timeRange}`;
+                  const isSelected = selectedSlots[key];
+                  return (
+                  <TouchableOpacity
+                    key={slot.slot_id}
+                    style={[styles.slot, selectedSlots[slot.slot_id] && styles.slotSelected]}
+                    onPress={() => toggleSlot(slot)}
+                  >
+                    <Text style={[styles.slotText, selectedSlots[slot.slot_id] && { color: '#fff' }]}>
+                      {slot.timeRange}
+                    </Text>
+                  </TouchableOpacity>
+
+                  );
+                })}
+            </ScrollView>
+          </View>
+        );
+      })
+    )}
+
+    <Text style={styles.title}>Bạn có yêu cầu hình thức tư vấn đặc biệt nào không?</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="Mô tả yêu cầu đặc biệt..."
+      placeholderTextColor="#999"
+      value={specialRequest}
+      onChangeText={setSpecialRequest}
+    />
+
+    <Text style={styles.title}>Thông tin cá nhân</Text>
+    <TextInput
+    
+      style={[styles.input, nameError ? styles.inputError : null]}
+      placeholder="Họ và tên của bạn"
+      placeholderTextColor="#999"
+      value={name}
+      onChangeText={handleNameChange}
+    />
+    {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+    <TextInput
+      style={[styles.input, phoneError ? styles.inputError : null]}
+      placeholder="Số điện thoại của bạn"
+      placeholderTextColor="#999"
+      value={phone}
+      keyboardType="phone-pad"
+      onChangeText={handlePhoneChange}
+    />
+    {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+    <TextInput
+      style={[styles.input, emailError ? styles.inputError : null]}
+      placeholder="Email của bạn"
+      placeholderTextColor="#999"
+      value={email}
+      keyboardType="email-address"
+      onChangeText={handleEmailChange}
+    />
+ {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+    <Text style={styles.title}>Bạn có muốn nhận thông báo về lịch hẹn qua email không?</Text>
+    <View style={styles.columnOptions}>
+      {['Có', 'Không'].map((option) => (
+        <TouchableOpacity
+          key={option}
+          style={[styles.notifyOption, notify === option && styles.notifySelected]}
+          onPress={() => setNotify(option)}
+        >
+          <Text style={{ color: notify === option ? '#fff' : '#000' }}>{option}</Text>
+        </TouchableOpacity>
       ))}
+    </View>
 
-      <Text style={styles.title}>Bạn muốn tư vấn theo hình thức nào?</Text>
-      <View style={styles.columnOptions}>
-        <TouchableOpacity
-          style={[styles.methodOption, mode === 'Trực tiếp' && styles.selectedMethod]}
-          onPress={() => setMode('Trực tiếp')}
-        >
-          <Text>Trực tiếp - 799.000đ / 1 tiếng</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.methodOption, mode === 'Online' && styles.selectedMethod]}
-          onPress={() => setMode('Online')}
-        >
-          <Text>Online - 599.000đ / 1 tiếng</Text>
-        </TouchableOpacity>
-      </View>
+    <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+      <Text style={styles.submitText}>Đến trang thanh toán</Text>
+    </TouchableOpacity>
 
-      <Text style={styles.title}>Bạn có yêu cầu hình thức tư vấn đặc biệt nào không?</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Mô tả yêu cầu đặc biệt..."
-        placeholderTextColor="#999"
-        value={specialRequest}
-        onChangeText={setSpecialRequest}
-      />
-
-      <Text style={styles.title}>Thông tin cá nhân</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Họ và tên của bạn"
-        placeholderTextColor="#999"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Số điện thoại của bạn"
-        placeholderTextColor="#999"
-        value={phone}
-        keyboardType="phone-pad"
-        onChangeText={setPhone}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email của bạn"
-        placeholderTextColor="#999"
-        value={email}
-        keyboardType="email-address"
-        onChangeText={setEmail}
-      />
-
-      <Text style={styles.title}>Bạn có muốn nhận thông báo về lịch hẹn qua email không?</Text>
-      <View style={styles.columnOptions}>
-        {['Có', 'Không'].map((option) => (
-          <TouchableOpacity
-            key={option}
-            style={[styles.notifyOption, notify === option && styles.notifySelected]}
-            onPress={() => setNotify(option)}
-          >
-            <Text style={{ color: notify === option ? '#fff' : '#000' }}>{option}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Đến trang thanh toán</Text>
-      </TouchableOpacity>
-     <Text style={styles.test} onPress={()=> router.push('/confirmPage')}>confirm test</Text>
-      <TouchableOpacity onPress={router.back}>
-        <Text style={styles.backText}>QUAY LẠI</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
+    <TouchableOpacity onPress={router.back}>
+      <Text style={styles.backText}>QUAY LẠI</Text>
+    </TouchableOpacity>
+  </ScrollView>
+);
 };
 
 export default BookingPage;
@@ -248,9 +443,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 70,
   },
-  test: {
-    color: 'red',
-    paddingVertical: 20,
-    fontSize: 20,
-  }
+    inputError: {
+    borderColor: '#ff4444',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
 });
