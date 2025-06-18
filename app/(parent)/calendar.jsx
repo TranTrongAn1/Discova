@@ -46,7 +46,10 @@ const Calendar = () => {
   const [toast, setToast] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
-
+  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedPastStatus, setSelectedPastStatus] = useState('All');
+  const itemsPerPage = 6;
+  const [currentPage, setCurrentPage] = useState(1);
   // Function to get Vietnamese day name
   const getVietnameseDayName = (dayOfWeek) => {
     const vietDayNames = [
@@ -142,6 +145,53 @@ const Calendar = () => {
       setToast(null);
     }
   }, [toast]);
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      'Payment_Pending': '#FF9500', // Orange
+      'Scheduled': '#34C759',       // Green
+      'In_Progress': '#007AFF',     // Blue
+      'Completed': '#8E8E93',       // Gray
+      'Cancelled': '#FF3B30',       // Red
+      'No_Show': '#FF6B35',         // Orange-Red
+      'Payment_Failed': '#D70015'   // Dark Red
+    };
+    return statusColors[status] || '#000000'; // Default black
+  };
+
+  // Status display text mapping
+  const getStatusDisplayText = (status) => {
+    const statusTexts = {
+      'Payment_Pending': 'Chờ thanh toán',
+      'Scheduled': 'Đã lên lịch',
+      'In_Progress': 'Đang tiến hành',
+      'Completed': 'Hoàn thành',
+      'Cancelled': 'Đã hủy',
+      'No_Show': 'Không có mặt',
+      'Payment_Failed': 'Thanh toán thất bại'
+    };
+    return statusTexts[status] || status;
+  };
+
+  // Check if cancel button should be disabled
+  const isCancelDisabled = (status) => {
+    const disabledStatuses = ['Completed', 'Cancelled', 'No_Show', 'In_Progress'];
+    return disabledStatuses.includes(status);
+  };
+  const filteredAppointments = selectedStatus === 'All'
+    ? upcomingAppointments
+    : upcomingAppointments.filter(a => a.appointment_status === selectedStatus);
+  const filteredPastAppointments = selectedPastStatus === 'All'
+    ? pastAppointments
+    : pastAppointments.filter(a => a.appointment_status === selectedPastStatus);
+
+
+
+  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
 
@@ -214,15 +264,53 @@ const Calendar = () => {
         {/* lịch hẹn của bạn */}
         <View style={styles.appointmentContainer}>
           <Text style={styles.sectionTitle}>Lịch hẹn của bạn</Text>
-          {upcomingAppointments && upcomingAppointments.length > 0 ? (
-            upcomingAppointments.map((appointment, index) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContainer}
+          >
+            {['All', 'Payment_Pending', 'Scheduled', 'In_Progress', 'Completed', 'Cancelled', 'No_Show', 'Payment_Failed'].map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={[
+                  styles.filterButton,
+                  selectedStatus === status && styles.activeFilterButton
+                ]}
+                onPress={() => setSelectedStatus(status)}
+              >
+                <Text style={[
+                  styles.filterButtonText,
+                  selectedStatus === status && styles.activeFilterButtonText
+                ]}>
+                  {status === 'All' ? 'Tất cả' : getStatusDisplayText(status)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+
+          {filteredAppointments && filteredAppointments.length > 0 ? (
+            paginatedAppointments.map((appointment, index) => (
               <View key={appointment.appointment_id || index} style={styles.appointmentCardWrapper}>
                 <View style={styles.card}>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}</Text>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDateTimeRange(appointment.scheduled_start_time, appointment.scheduled_end_time)}</Text>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Hình thức tư vấn:</Text> {appointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : appointment.session_type}</Text>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Thời lượng:</Text> {appointment.duration_hours} giờ</Text>
-                  <Text style={styles.cardText}><Text style={styles.bold}>Trạng thái:</Text> {appointment.appointment_status === 'Scheduled' ? 'Đã lên lịch' : appointment.appointment_status}</Text>
+                  <Text style={styles.cardText}>
+                    <Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}
+                  </Text>
+                  <Text style={styles.cardText}>
+                    <Text style={styles.bold}>Ngày & giờ:</Text> {formatDateTimeRange(appointment.scheduled_start_time, appointment.scheduled_end_time)}
+                  </Text>
+                  <Text style={styles.cardText}>
+                    <Text style={styles.bold}>Hình thức tư vấn:</Text> {appointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : appointment.session_type}
+                  </Text>
+                  <Text style={styles.cardText}>
+                    <Text style={styles.bold}>Thời lượng:</Text> {appointment.duration_hours} giờ
+                  </Text>
+                  <Text style={styles.cardText}>
+                    <Text style={styles.bold}>Trạng thái: </Text>
+                    <Text style={[styles.statusText, { color: getStatusColor(appointment.appointment_status) }]}>
+                      {getStatusDisplayText(appointment.appointment_status)}
+                    </Text>
+                  </Text>
                   <Text style={styles.cardText}>
                     {appointment.session_type == 'InitialConsultation' ? (
                       <>
@@ -239,8 +327,8 @@ const Calendar = () => {
                             }
                           }}
                         >
-                          <Text style={[styles.bold, { color: 'blue', textDecorationLine: 'underline' }]}>
-                            Zoom Link
+                          <Text style={[styles.bold]}>
+                            Zoom Link ở trong chi tiết
                           </Text>
                         </TouchableOpacity>
                       </>
@@ -259,10 +347,23 @@ const Calendar = () => {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => handleCancelPress(appointment.appointment_id)}
+                    style={[
+                      styles.cancelButton,
+                      isCancelDisabled(appointment.appointment_status) && styles.disabledButton
+                    ]}
+                    onPress={() => {
+                      if (!isCancelDisabled(appointment.appointment_status)) {
+                        handleCancelPress(appointment.appointment_id);
+                      }
+                    }}
+                    disabled={isCancelDisabled(appointment.appointment_status)}
                   >
-                    <Text style={styles.cancelButtonText}>HUỶ LỊCH</Text>
+                    <Text style={[
+                      styles.cancelButtonText,
+                      isCancelDisabled(appointment.appointment_status) && styles.disabledButtonText
+                    ]}>
+                      HUỶ LỊCH
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -271,20 +372,64 @@ const Calendar = () => {
             <Text style={styles.noAppointmentText}>Không có lịch hẹn nào.</Text>
           )}
         </View>
+        {totalPages > 1 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              style={[styles.pageButton, currentPage === 1 && styles.disabledButton]}
+              onPress={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <Text style={styles.pageButtonText}>Trước</Text>
+            </TouchableOpacity>
 
+            <Text style={styles.pageIndicator}>
+              {currentPage} / {totalPages}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.pageButton, currentPage === totalPages && styles.disabledButton]}
+              onPress={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              <Text style={styles.pageButtonText}>Tiếp</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {/* lịch sử hẹn */}
         <View style={styles.appointmentContainer}>
           <Text style={styles.sectionTitle}>Lịch sử hẹn</Text>
-          {pastAppointments && pastAppointments.length > 0 ? (
-            pastAppointments.map((appointment, index) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContainer}
+          >
+            {['All', 'Payment_Pending', 'Scheduled', 'In_Progress', 'Completed', 'Cancelled', 'No_Show', 'Payment_Failed'].map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={[
+                  styles.filterButton,
+                  selectedPastStatus === status && styles.activeFilterButton
+                ]}
+                onPress={() => setSelectedPastStatus(status)}
+              >
+                <Text style={[
+                  styles.filterButtonText,
+                  selectedPastStatus === status && styles.activeFilterButtonText
+                ]}>
+                  {status === 'All' ? 'Tất cả' : getStatusDisplayText(status)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {filteredPastAppointments && filteredPastAppointments.length > 0 ? (
+            filteredPastAppointments.map((appointment, index) => (
               <View key={appointment.id || index} style={styles.appointmentCardWrapper}>
                 <View style={styles.card}>
                   <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}</Text>
                   <Text style={styles.cardText}><Text style={styles.bold}>Ngày & giờ:</Text> {formatDateTimeRange(appointment.scheduled_start_time, appointment.scheduled_end_time)}</Text>
                   <Text style={styles.cardText}><Text style={styles.bold}>Hình thức tư vấn:</Text> {appointment.session_type === 'InitialConsultation' ? 'Tư vấn trực tiếp' : appointment.session_type}</Text>
-                  <Text style={styles.cardText}>
-                    <Text style={styles.bold}>Thời lượng:</Text> {appointment.duration_hours} giờ
-                  </Text>
+                  <Text style={styles.cardText}><Text style={styles.bold}>Thời lượng:</Text> {appointment.duration_hours} giờ</Text>
                   <Text style={styles.cardText}>
                     {appointment.session_type == 'InitialConsultation' ? (
                       <>
@@ -297,7 +442,7 @@ const Calendar = () => {
                     )}
                   </Text>
                   <Text style={styles.cardText}>
-                    <Text style={styles.bold}>Trạng thái:</Text> {appointment.appointment_status === 'Completed' ? 'Đã hoàn thành' : appointment.appointment_status === 'Cancelled' ? 'Đã hủy' : appointment.appointment_status}
+                    <Text style={styles.bold}>Trạng thái:</Text> {getStatusDisplayText(appointment.appointment_status)}
                   </Text>
                 </View>
                 <View style={styles.buttonRow}>
@@ -319,20 +464,21 @@ const Calendar = () => {
           ) : (
             <Text style={styles.noAppointmentText}>Không có lịch sử hẹn nào.</Text>
           )}
+
         </View>
       </View>
       <CancelModal
         visible={cancelModalVisible}
         onClose={() => setCancelModalVisible(false)}
         onSubmit={handleCancelSubmit} />
-        <DetailsModal
+      <DetailsModal
         visible={detailsModalVisible}
         appointment={selectedAppointment}
         onClose={() => setDetailsModalVisible(false)}
       />
 
     </ScrollView>
-    
+
   );
 };
 
@@ -485,4 +631,63 @@ const styles = StyleSheet.create({
     zIndex: 9999,
     elevation: 9999, // For Android
   },
+  statusText: {
+    fontWeight: 'bold',
+    marginLeft: 5,
+  },
+  disabledButton: {
+    backgroundColor: '#E5E5EA',
+    opacity: 0.6,
+  },
+  disabledButtonText: {
+    color: '#8E8E93',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+    justifyContent: 'center',
+  },
+  filterButton: {
+    backgroundColor: '#E5E5EA',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    margin: 4,
+    borderRadius: 12,
+  },
+  activeFilterButton: {
+    backgroundColor: '#8E97FD',
+  },
+  filterButtonText: {
+    color: 'black',
+  },
+  activeFilterButtonText: {
+    color: 'white',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  pageButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#6200ee',
+    borderRadius: 8,
+    marginHorizontal: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
+  pageButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  pageIndicator: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+
 });
