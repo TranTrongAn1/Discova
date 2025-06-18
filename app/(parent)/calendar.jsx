@@ -50,6 +50,9 @@ const Calendar = () => {
   const [selectedPastStatus, setSelectedPastStatus] = useState('All');
   const itemsPerPage = 6;
   const [currentPage, setCurrentPage] = useState(1);
+  const pastItemsPerPage = 6;
+const [pastCurrentPage, setPastCurrentPage] = useState(1);
+
   // Function to get Vietnamese day name
   const getVietnameseDayName = (dayOfWeek) => {
     const vietDayNames = [
@@ -185,7 +188,12 @@ const Calendar = () => {
     ? pastAppointments
     : pastAppointments.filter(a => a.appointment_status === selectedPastStatus);
 
+const totalPastPages = Math.ceil(filteredPastAppointments.length / pastItemsPerPage);
 
+const paginatedPastAppointments = filteredPastAppointments.slice(
+  (pastCurrentPage - 1) * pastItemsPerPage,
+  pastCurrentPage * pastItemsPerPage
+);
 
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
   const paginatedAppointments = filteredAppointments.slice(
@@ -423,7 +431,7 @@ const Calendar = () => {
           </ScrollView>
 
           {filteredPastAppointments && filteredPastAppointments.length > 0 ? (
-            filteredPastAppointments.map((appointment, index) => (
+            paginatedPastAppointments.map((appointment, index) => (
               <View key={appointment.id || index} style={styles.appointmentCardWrapper}>
                 <View style={styles.card}>
                   <Text style={styles.cardText}><Text style={styles.bold}>Chuyên gia:</Text> {appointment.psychologist_name}</Text>
@@ -466,6 +474,30 @@ const Calendar = () => {
           )}
 
         </View>
+{totalPastPages > 1 && (
+  <View style={styles.paginationContainer}>
+    <TouchableOpacity
+      style={[styles.pageButton, pastCurrentPage === 1 && styles.disabledButton]}
+      onPress={() => setPastCurrentPage((prev) => Math.max(prev - 1, 1))}
+      disabled={pastCurrentPage === 1}
+    >
+      <Text style={styles.pageButtonText}>Trước</Text>
+    </TouchableOpacity>
+
+    <Text style={styles.pageIndicator}>
+      {pastCurrentPage} / {totalPastPages}
+    </Text>
+
+    <TouchableOpacity
+      style={[styles.pageButton, pastCurrentPage === totalPastPages && styles.disabledButton]}
+      onPress={() => setPastCurrentPage((prev) => Math.min(prev + 1, totalPastPages))}
+      disabled={pastCurrentPage === totalPastPages}
+    >
+      <Text style={styles.pageButtonText}>Tiếp</Text>
+    </TouchableOpacity>
+  </View>
+)}
+
       </View>
       <CancelModal
         visible={cancelModalVisible}
