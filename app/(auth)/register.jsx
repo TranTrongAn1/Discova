@@ -27,7 +27,11 @@ import * as AuthSession from 'expo-auth-session';
 WebBrowser.maybeCompleteAuthSession();
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
+const redirectUri = AuthSession.makeRedirectUri({
+  useProxy: true,
+  scheme: 'discova',
+});
+
 
 const Register = ({ onSwitch }) => {
   const [email, setEmail] = useState('');
@@ -38,20 +42,54 @@ const Register = ({ onSwitch }) => {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [userType, setUserType] = useState('Parent'); // Default value
   const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
-  // Google
-  const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
-    expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    iosClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com', // same here for now
-    androidClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    scopes: ['profile', 'email'],
-  });
-  useEffect(() => {
-    if (requestGoogle) {
-      console.log("Correct redirect URI:", AuthSession.makeRedirectUri({ useProxy: true }));
+// Update your Google Auth configuration in the Register component:
 
-    }
-    // ... rest of your useEffect for handling response
-  }, [requestGoogle, responseGoogle]);
+// Replace your Google Auth section with this debug version:
+// Alternative: Use a localhost redirect (if you set up a local server)
+
+const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
+  expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
+  iosClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
+  androidClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
+  scopes: ['profile', 'email'],
+  redirectUri,
+});
+
+// Note: This requires setting up a local server to handle the redirect
+
+useEffect(() => {
+  if (requestGoogle) {
+    
+    // Log all the redirect URI options
+  console.log("Generated proxy URI:", redirectUri,);
+    const customUri = AuthSession.makeRedirectUri({ useProxy: false });
+    const schemeUri = AuthSession.makeRedirectUri({ scheme: 'discova', useProxy: false });
+    
+    console.log("=== REDIRECT URI DEBUG ===");
+    console.log("Custom URI:", customUri);
+    console.log("Scheme URI:", schemeUri);
+    console.log("Request config:", JSON.stringify(requestGoogle, null, 2));
+    console.log("========================");
+  }
+}, [requestGoogle]);
+
+useEffect(() => {
+  console.log("=== RESPONSE DEBUG ===");
+  console.log("Google Response:", JSON.stringify(responseGoogle, null, 2));
+  console.log("=====================");
+
+  if (responseGoogle?.type === 'success') {
+    const token = responseGoogle.authentication.accessToken;
+    handleSocialLogin('google', token);
+  } else if (responseGoogle?.type === 'error') {
+    console.log("Google Auth Error:", responseGoogle.error);
+    Toast.show({
+      type: 'error',
+      text1: 'Google Auth Error',
+      text2: responseGoogle.error?.message || 'Unknown error',
+    });
+  }
+}, [responseGoogle]);
 
 
   // Facebook
