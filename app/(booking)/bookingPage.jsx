@@ -57,7 +57,7 @@ const BookingPage = () => {
       setEmailError('');
     }
   };
-
+  console.log("session: ", type )
   // Handle phone input change with validation
   const handlePhoneChange = (text) => {
     setPhone(text);
@@ -153,7 +153,7 @@ const BookingPage = () => {
             return;
           }
           const response = await api.get(
-            `/api/appointments/slots/available_for_booking/?psychologist_id=${psychologistId}&session_type=${mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation'}&date_from=${dateFrom}&date_to=${dateTo}`,
+            `/api/appointments/slots/available_for_booking/?psychologist_id=${psychologistId}&session_type=${type == 'online' ? 'OnlineMeeting' : 'InitialConsultation'}&date_from=${dateFrom}&date_to=${dateTo}`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -220,7 +220,7 @@ const BookingPage = () => {
           childId: childId,
           psychologistId: id,
           psychologist_name: PsyName,
-          session_type: mode === 'Online' ? 'OnlineMeeting' : 'InitialConsultation',
+          session_type: type == 'online' ? 'OnlineMeeting' : 'InitialConsultation',
           start_slot_id: selectedSlotId,
           parent_notes: specialRequest,
           name,
@@ -253,11 +253,14 @@ return (
     ) : (
       Object.entries(availableSlots).map(([day, slots]) => {
         // Here is where you define dayLabel:
-        const dayLabel = new Date(day).toLocaleDateString('vi-VN', {
+        const [year, month, date] = day.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, date); // Avoids ISO timezone issues
+        const dayLabel = new Intl.DateTimeFormat('vi-VN', {
           weekday: 'short',
           day: 'numeric',
           month: 'numeric',
-        });
+        }).format(dateObj);
+
 
         return (
           <View key={day} style={styles.dayBlock}>
