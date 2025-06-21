@@ -10,14 +10,16 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fusia.discova"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.fusia.discova"
     },
     "web": {
       "bundler": "metro",
