@@ -1,4 +1,4 @@
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
@@ -341,10 +341,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 10,
     paddingHorizontal: 18,
-    shadowColor: '#000000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 2
+
+      },
+
+      android: {
+
+        elevation: 2,
+
+      },
+
+      web: {
+
+        boxShadow: '0 1 2px rgba(0,0,0,0000000.1)',
+
+      },
+
+    }),
     elevation: 2,
     marginVertical: 6,
     marginHorizontal: 4,
@@ -368,10 +388,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
     borderRadius: 10,
     padding: 15,
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: 5
+
+      },
+
+      android: {
+
+        elevation: 5,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 5px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 3,
   },
   cardText: {
@@ -397,10 +437,30 @@ const styles = StyleSheet.create({
     width: 180,
     height: 250,
     overflow: 'hidden',
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 4
+
+      },
+
+      android: {
+
+        elevation: 4,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 4px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 3,
     alignItems: 'center',
     justifyContent: 'center',

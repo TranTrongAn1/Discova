@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Slot, useRouter, usePathname } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Slot, usePathname, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import psychologists from '../(Pychologist)/pyschcologists';
 
 const Layout = () => {
@@ -12,9 +12,10 @@ const Layout = () => {
 
   const navItems = [
     { name: 'calendar', label: 'Calendar', icon: 'calendar-outline' },
+    { name: 'availability', label: 'Availability', icon: 'time-outline' },
     { name: 'mess', label: 'Mess', icon: 'chatbox-ellipses-outline' },
     { name: 'client', label: 'Client', icon: 'people-outline' },
-    { name: 'workInfo', label: 'Profile', icon: 'person-outline' },
+    { name: 'profile', label: 'Profile', icon: 'person-outline' },
   ];
 
   const handleLogout = async () => {
@@ -37,7 +38,7 @@ const Layout = () => {
         <View style={styles.rightIcons}>
           <Ionicons name="search" size={22} color="#333" style={styles.icon} />
           <Ionicons name="notifications-outline" size={22} color="#333" style={styles.icon} />
-          <TouchableOpacity onPress={() => router.push('/profile')}>
+          <TouchableOpacity onPress={() => router.push('/(Pychologist)/profile')}>
             <Image
               source={{ uri: psychologists[0].img }}
               resizeMode="cover"
@@ -53,7 +54,7 @@ const Layout = () => {
           <TouchableOpacity
             onPress={() => {
               setMenuOpen(false);
-              router.push('/review');
+              router.push('/(Pychologist)/review');
             }}
           >
             <Text style={styles.dropdownItem}>Review</Text>
@@ -77,7 +78,7 @@ const Layout = () => {
           return (
             <TouchableOpacity
               key={item.name}
-              onPress={() => router.push(`/${item.name}`)}
+              onPress={() => router.push(`/(Pychologist)/${item.name}`)}
               style={[styles.navItem, isActive && styles.activeTab]}
             >
               <Ionicons
@@ -105,10 +106,48 @@ export default Layout;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
     flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#6c63ff',
     paddingTop: 50,
-    paddingHorizontal: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    ...Platform.select({
+      ios: {
+        ...Platform.select({
+
+          ios: {
+
+            shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4
+
+          },
+
+          android: {
+
+            elevation: 4,
+
+          },
+
+          web: {
+
+            boxShadow: '0 2 4px rgba(0,0,0,0000.2)',
+
+          },
+
+        }),
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+      },
+    }),
   },
   topRow: {
     flexDirection: 'row',
@@ -160,11 +199,40 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     zIndex: 10,
     padding: 8,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    ...Platform.select({
+      ios: {
+        ...Platform.select({
+
+          ios: {
+
+            shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4
+
+          },
+
+          android: {
+
+            elevation: 4,
+
+          },
+
+          web: {
+
+            boxShadow: '0 2 4px rgba(0,0,0,0000.2)',
+
+          },
+
+        }),
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+      },
+    }),
   },
   dropdownItem: {
     paddingVertical: 8,

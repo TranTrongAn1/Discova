@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, Alert, TouchableOpacity } from 'react-native';
-import { CardField, useConfirmPayment, initStripe } from '@stripe/stripe-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CardField, initStripe, useConfirmPayment } from '../../components/StripeWrapper';
 
 const StripePaymentScreen = () => {
   // Receive the parameters exactly as sent from ConfirmPage
@@ -13,14 +13,14 @@ const StripePaymentScreen = () => {
     Currency,
     bookingData: bookingDataString,
   } = useLocalSearchParams();
-  
+
   const [cardDetails, setCardDetails] = useState();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [stripeInitialized, setStripeInitialized] = useState(false);
   const { confirmPayment } = useConfirmPayment();
   const bookingData = JSON.parse(bookingDataString);
-  
+
   // Now you can access all properties
   const psychologist_name = bookingData.psychologist_name;
   const booking_name = bookingData.name;
@@ -66,7 +66,7 @@ const StripePaymentScreen = () => {
     }
 
     setLoading(true);
-    
+
     try {
       const { paymentIntent, error } = await confirmPayment(clientSecret, {
         paymentMethodType: 'Card',

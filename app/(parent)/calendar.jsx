@@ -1,4 +1,4 @@
-import { Dimensions, ImageBackground, StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { Dimensions, ImageBackground, StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import top from '../../assets/images/TopCalendar.png';
 import { Feather } from '@expo/vector-icons';
@@ -604,10 +604,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
     borderRadius: 10,
     padding: 15,
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: 5
+
+      },
+
+      android: {
+
+        elevation: 5,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 5px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 3,
   },
   cardText: {
