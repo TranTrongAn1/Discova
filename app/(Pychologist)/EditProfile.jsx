@@ -4,16 +4,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View
+    Alert,
+    Animated,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 import api from '../(auth)/api';
 
@@ -161,7 +161,25 @@ const EditProfile = () => {
     const method = isNewProfile ? api.post : api.patch;
 
     await method(endpoint, payload);
-    Alert.alert('Success', `Profile ${isNewProfile ? 'created' : 'updated'} successfully!`);
+    
+    Alert.alert(
+      'Thành công', 
+      `Hồ sơ ${isNewProfile ? 'đã được tạo' : 'đã được cập nhật'} thành công!`,
+      [
+        {
+          text: 'Tiếp tục',
+          onPress: () => {
+            if (isNewProfile) {
+              // New profile created - redirect to psychologist home
+              router.replace('/(Pychologist)/profile');
+            } else {
+              // Profile updated - go back to profile page
+              router.back();
+            }
+          }
+        }
+      ]
+    );
   } catch (error) {
     const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || `Could not ${isNewProfile ? 'create' : 'update'} profile.`;
     Alert.alert('Error', errorMessage);
@@ -173,7 +191,7 @@ const EditProfile = () => {
       toValue: 0.95,
       friction: 8,
       tension: 40,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   };
 
@@ -182,7 +200,7 @@ const EditProfile = () => {
       toValue: 1,
       friction: 8,
       tension: 40,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   };
 
@@ -194,7 +212,7 @@ const EditProfile = () => {
         toValue: 1.02,
         friction: 8,
         tension: 40,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     };
 
@@ -203,7 +221,7 @@ const EditProfile = () => {
         toValue: 1,
         friction: 8,
         tension: 40,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     };
 
@@ -480,10 +498,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#6c63ff',
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowRadius: 6
+
+      },
+
+      android: {
+
+        elevation: 6,
+
+      },
+
+      web: {
+
+        boxShadow: '0 4 6px rgba(0,0,0,0000.2)',
+
+      },
+
+    }),
     elevation: 6,
     marginBottom: 16,
   },
@@ -511,10 +549,30 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     padding: 24,
     borderRadius: 20,
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
-    shadowRadius: 10,
+    shadowRadius: 10
+
+      },
+
+      android: {
+
+        elevation: 10,
+
+      },
+
+      web: {
+
+        boxShadow: '0 6 10px rgba(0,0,0,0000.15)',
+
+      },
+
+    }),
     elevation: 6,
     borderWidth: 1,
     borderColor: '#f0f0f0',
@@ -539,10 +597,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9fb',
     fontSize: 16,
     color: '#333',
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: 4
+
+      },
+
+      android: {
+
+        elevation: 4,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 4px rgba(0,0,0,0000.08)',
+
+      },
+
+    }),
     elevation: 2,
   },
   textArea: {

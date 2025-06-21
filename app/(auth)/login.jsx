@@ -1,12 +1,12 @@
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Dimensions, TouchableWithoutFeedback, KeyboardAvoidingView, ScrollView, Platform, Keyboard, Animated } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import axios from 'axios';
+import { router, useNavigation } from 'expo-router';
+import React, { useRef, useState } from 'react';
+import { Animated, Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import Toast from 'react-native-toast-message';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -15,6 +15,7 @@ const Login = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const navigation = useNavigation();
+
   const handleLogin = async () => {
     if (loading) return;
 
@@ -24,27 +25,42 @@ const Login = () => {
         text1: 'Missing Fields',
         text2: 'Please enter both email and password',
       });
-      
       return;
     }
+
     setLoading(true);
     try {
+      console.log('=== LOGIN DEBUG START ===');
+      console.log('Attempting login with email:', email);
+      
       const response = await axios.post('https://kmdiscova.id.vn/api/auth/login/', {
-
         email,
         password,
       });
 
+      console.log('Login response:', response.data);
+      
       const { token, user } = response.data;
+
+      console.log('Token received:', token ? token.substring(0, 20) + '...' : 'null');
+      console.log('User data:', user);
 
       // Save token and user info to AsyncStorage
       await AsyncStorage.setItem('access_token', token);
       await AsyncStorage.setItem('user_type', user.user_type);
-      await AsyncStorage.setItem('user_id', user.id.toString()); // optional
-      console.log(token)
+      await AsyncStorage.setItem('user_id', user.id.toString());
 
-
-      console.log('Login successful:', response.data);
+      console.log('Data saved to AsyncStorage');
+      
+      // Verify token was saved correctly
+      const savedToken = await AsyncStorage.getItem('access_token');
+      const savedUserType = await AsyncStorage.getItem('user_type');
+      console.log('Verification - Saved token exists:', !!savedToken);
+      console.log('Verification - Saved token value:', savedToken ? savedToken.substring(0, 20) + '...' : 'null');
+      console.log('Verification - Saved user type:', savedUserType);
+      console.log('Verification - Token matches:', savedToken === token);
+      
+      console.log('=== LOGIN DEBUG END ===');
 
       Toast.show({
         type: 'success',
@@ -52,10 +68,10 @@ const Login = () => {
         text2: 'Redirecting you...',
       });
 
-      // Navigate to welcome screen
-      router.push('/welcome');
-      setLoading(false);
+      // Simply redirect to welcome page - let it handle the flow
+      router.replace('/welcome');
 
+      setLoading(false);
     } catch (error) {
       console.log('Login error:', error.response?.data || error.message);
       Toast.show({
@@ -63,67 +79,64 @@ const Login = () => {
         text1: 'Login Failed',
         text2: error.response?.data?.message || 'Invalid credentials',
       });
-
       setLoading(false);
     }
   };
 
-    useFocusEffect(
-      React.useCallback(() => {
-        // Reset animation values
-        fadeAnim.setValue(0);
-        slideAnim.setValue(50);
+  useFocusEffect(
+    React.useCallback(() => {
+      // Reset animation values
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
 
-        // Start animation again
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(slideAnim, {
-            toValue: 0,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }, [])
-    );
+      // Start animation again
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }, [])
+  );
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      {/* lifts content when keyboard shows */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1,backgroundColor: '#fff', }}
+        style={{ flex: 1, backgroundColor: '#fff' }}
       >
-        {/* scroll if still taller than screen */}
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-            <Toast position="top" visibilityTime={4000} topOffset={50} />
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => {
-                  if (navigation.canGoBack?.()) {
-                    navigation.goBack();
-                  } else {
-                    router.replace('/');
-                  }
-                }}
-              >
-              <Ionicons name="arrow-back" size={24} color="black" />
-            </TouchableOpacity>
-              <Animated.View
-                style={[
-                  styles.container,
-                  {
-                    opacity: fadeAnim,
-                    transform: [{ translateX: slideAnim }],
-                  },
-                ]}
-              >
+          <Toast position="top" visibilityTime={4000} topOffset={50} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              if (navigation.canGoBack?.()) {
+                navigation.goBack();
+              } else {
+                router.replace('/');
+              }
+            }}
+          >
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+          <Animated.View
+            style={[
+              styles.container,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateX: slideAnim }],
+              },
+            ]}
+          >
             <Text style={styles.Welcome}>CHÀO MỪNG TRỞ LẠI!</Text>
 
             <Text style={styles.Welcome}>Facebook</Text>
@@ -131,7 +144,6 @@ const Login = () => {
 
             <Text style={styles.Text}>HOẶC ĐĂNG NHẬP BẰNG EMAIL</Text>
 
-            {/* Địa chỉ email input */}
             <TextInput
               style={styles.input}
               placeholder="Địa chỉ email"
@@ -141,7 +153,6 @@ const Login = () => {
               onChangeText={setEmail}
             />
 
-            {/* Mật khẩu input */}
             <TextInput
               style={styles.input}
               placeholder="Mật khẩu"
@@ -151,14 +162,21 @@ const Login = () => {
               onChangeText={setPassword}
             />
 
-            <TouchableOpacity style={[styles.Button, loading && { opacity: 0.6 }, ]} activeOpacity={0.8} onPress={() => { handleLogin() }} disabled={loading}>
-              <Text style={styles.buttonText}> {loading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP'}</Text>
+            <TouchableOpacity 
+              style={[styles.Button, loading && { opacity: 0.6 }]} 
+              activeOpacity={0.8} 
+              onPress={handleLogin} 
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP'}
+              </Text>
             </TouchableOpacity>
 
-            <Text style={styles.Text3}> Quên mật khẩu ?</Text>
+            <Text style={styles.Text3}>Quên mật khẩu?</Text>
 
             <View style={styles.RegisterContainer}>
-              <Text style={styles.Text}> CHƯA CÓ TÀI KHOẢN? </Text>
+              <Text style={styles.Text}>CHƯA CÓ TÀI KHOẢN?</Text>
               <TouchableOpacity onPress={() => router.push('/register')}>
                 <Text style={styles.registerLink}>ĐĂNG KÝ</Text>
               </TouchableOpacity>
@@ -167,7 +185,6 @@ const Login = () => {
         </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
-
   );
 };
 

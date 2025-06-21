@@ -130,15 +130,33 @@ const Register = ({ onSwitch }) => {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 1000,
-        useNativeDriver: true,
+        useNativeDriver: false, // Disable for web compatibility
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 1000,
-        useNativeDriver: true,
+        useNativeDriver: false, // Disable for web compatibility
       }),
     ]).start();
   }, []);
+
+  const animatePressIn = () => {
+    Animated.spring(fadeAnim, {
+      toValue: 0.95,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: false, // Disable for web compatibility
+    }).start();
+  };
+
+  const animatePressOut = () => {
+    Animated.spring(fadeAnim, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: false, // Disable for web compatibility
+    }).start();
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
