@@ -41,8 +41,8 @@ const Register = ({ onSwitch }) => {
   // Google
   const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
     expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    iosClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com', // same here for now
-    androidClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
+    iosClientId: '973045964577-53veuk6btpi3da7h9gerl112ieoauef7.apps.googleusercontent.com', // same here for now
+    androidClientId: '973045964577-3bffk3umbtsdgm5f26ud3folptakl2sv.apps.googleusercontent.com',
     scopes: ['profile', 'email'],
   });
   useEffect(() => {
