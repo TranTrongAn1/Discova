@@ -7,7 +7,6 @@
     "owner": "fusia",
     "icon": "./assets/images/app.png",
     "scheme": "discova",
-    "owner": "fusia", 
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
