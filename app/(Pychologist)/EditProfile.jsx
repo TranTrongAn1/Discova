@@ -60,6 +60,73 @@ const EditProfile = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [animatedValue] = useState(new Animated.Value(1));
 
+  // Function to populate form with test data
+  const populateTestData = () => {
+    const testData = {
+      first_name: 'Dr. Sarah',
+      last_name: 'Johnson',
+      profile_picture_url: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&crop=face',
+      license_number: 'PSY-2024-001234',
+      license_issuing_authority: 'California Board of Psychology',
+      license_expiry_date: '2025-12-31',
+      years_of_experience: 8,
+      biography: 'Dr. Sarah Johnson is a licensed clinical psychologist with over 8 years of experience specializing in child and adolescent psychology. She holds a Ph.D. in Clinical Psychology from Stanford University and has worked extensively with children experiencing anxiety, depression, and behavioral challenges. Dr. Johnson uses evidence-based approaches including Cognitive Behavioral Therapy (CBT) and play therapy to help children develop healthy coping mechanisms and emotional regulation skills.',
+      education: [
+        { 
+          degree: 'Ph.D. in Clinical Psychology', 
+          institution: 'Stanford University', 
+          year: 2016,
+          field_of_study: 'Clinical Psychology',
+          honors: 'Magna Cum Laude'
+        },
+        { 
+          degree: 'M.A. in Psychology', 
+          institution: 'Stanford University', 
+          year: 2013,
+          field_of_study: 'Psychology'
+        },
+        { 
+          degree: 'B.A. in Psychology', 
+          institution: 'University of California, Berkeley', 
+          year: 2011,
+          field_of_study: 'Psychology',
+          honors: 'Dean\'s List'
+        }
+      ],
+      certifications: [
+        { 
+          name: 'Licensed Clinical Psychologist', 
+          institution: 'California Board of Psychology', 
+          year: 2018,
+          certification_id: 'PSY-2024-001234',
+          expiry_date: '2025-12-31'
+        },
+        { 
+          name: 'Certified Child and Adolescent Therapist', 
+          institution: 'American Psychological Association', 
+          year: 2019,
+          certification_id: 'CCAT-2019-5678'
+        },
+        { 
+          name: 'Trauma-Focused CBT Certification', 
+          institution: 'National Child Traumatic Stress Network', 
+          year: 2020,
+          certification_id: 'TF-CBT-2020-9012'
+        }
+      ],
+      offers_initial_consultation: true,
+      offers_online_sessions: true,
+      office_address: '1234 Oak Street, Suite 200, San Francisco, CA 94102',
+      website_url: 'https://www.drsarahjohnson.com',
+      linkedin_url: 'https://www.linkedin.com/in/drsarahjohnson',
+      hourly_rate: '150.00',
+      initial_consultation_rate: '250.00',
+    };
+
+    setForm(testData);
+    Alert.alert('Test Data Loaded', 'Form has been populated with sample data for testing.');
+  };
+
   const parseDate = (dateStr) => {
     const parts = dateStr.split('-');
     if (parts.length === 3) {
@@ -94,6 +161,7 @@ const EditProfile = () => {
 
 
  const handleUpdate = async () => {
+  // Validate required fields according to API schema
   if (
     !form.first_name ||
     !form.last_name ||
@@ -101,17 +169,17 @@ const EditProfile = () => {
     !form.license_issuing_authority ||
     !form.license_expiry_date ||
     form.years_of_experience === '' ||
-    form.years_of_experience < 0
+    form.years_of_experience < 0 ||
+    form.years_of_experience > 60
   ) {
     Alert.alert(
       'Validation Error',
-      'All required fields must be filled.',
+      'Please fill all required fields. Years of experience must be between 0-60.',
     );
-    navigation.navigate('profile');
     return;
   }
 
-
+  // Validate URL formats
   const isValidUrl = (url) => {
     if (!url) return true;
     const urlPattern = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
@@ -127,47 +195,75 @@ const EditProfile = () => {
     return;
   }
 
-  const hourlyRate = form.hourly_rate
-    ? parseFloat(form.hourly_rate).toFixed(2)
-    : '';
-  const initialConsultationRate = form.initial_consultation_rate
-    ? parseFloat(form.initial_consultation_rate).toFixed(2)
-    : '';
+  // Validate rates (optional fields)
+  const hourlyRate = form.hourly_rate ? parseFloat(form.hourly_rate) : null;
+  const initialConsultationRate = form.initial_consultation_rate ? parseFloat(form.initial_consultation_rate) : null;
 
-  if (!hourlyRate || !initialConsultationRate || isNaN(hourlyRate) || isNaN(initialConsultationRate)) {
-    Alert.alert('Validation Error', 'Hourly Rate and Initial Consultation Rate must be valid numbers.');
+  if ((form.hourly_rate && isNaN(hourlyRate)) || (form.initial_consultation_rate && isNaN(initialConsultationRate))) {
+    Alert.alert('Validation Error', 'Rates must be valid numbers.');
     return;
   }
 
+  // Format education data according to API schema - send as array of objects
+  const validEducation = form.education.filter(edu => 
+    edu.degree && edu.institution && edu.year
+  ).map(edu => ({
+    degree: edu.degree.trim(),
+    institution: edu.institution.trim(),
+    year: parseInt(edu.year) || 2020,
+    field_of_study: edu.field_of_study?.trim() || '',
+    honors: edu.honors?.trim() || ''
+  }));
+
+  // Format certification data according to API schema - send as array of objects
+  const validCertifications = form.certifications.filter(cert => 
+    cert.name && cert.institution && cert.year
+  ).map(cert => ({
+    name: cert.name.trim(),
+    institution: cert.institution.trim(),
+    year: parseInt(cert.year) || 2020,
+    expiry_date: cert.expiry_date?.trim() || '',
+    certification_id: cert.certification_id?.trim() || ''
+  }));
+
   const payload = {
-    ...form,
+    first_name: form.first_name.trim(),
+    last_name: form.last_name.trim(),
+    profile_picture_url: form.profile_picture_url.trim() || null,
+    license_number: form.license_number.trim(),
+    license_issuing_authority: form.license_issuing_authority.trim(),
+    license_expiry_date: form.license_expiry_date,
+    years_of_experience: parseInt(form.years_of_experience) || 0,
+    biography: form.biography.trim() || '',
+    education: validEducation,
+    certifications: validCertifications,
+    offers_initial_consultation: form.offers_initial_consultation,
+    offers_online_sessions: form.offers_online_sessions,
+    office_address: form.office_address.trim() || '',
+    website_url: form.website_url.trim() || null,
+    linkedin_url: form.linkedin_url.trim() || null,
     hourly_rate: hourlyRate,
     initial_consultation_rate: initialConsultationRate,
-    years_of_experience: parseInt(form.years_of_experience) || 0,
-    education: form.education.filter(
-      (edu) => edu.degree || edu.institution || edu.year
-    ),
-    certifications: form.certifications.filter(
-      (cert) => cert.name || cert.institution || cert.year
-    ),
-    services_offered: form.services_offered || [],
   };
 
   try {
     const isNewProfile = !route.params?.profile || Object.keys(route.params.profile).length === 0;
     const endpoint = isNewProfile
       ? '/api/psychologists/profile/'
-      : '/api/psychologists/profile/update_profile';
+      : '/api/psychologists/profile/update_profile/';
     const method = isNewProfile ? api.post : api.patch;
 
-    await method(endpoint, payload);
+    console.log('Sending profile data:', payload);
+    const response = await method(endpoint, payload);
+    
+    console.log('Profile response:', response.data);
     
     Alert.alert(
-      'Thành công', 
-      `Hồ sơ ${isNewProfile ? 'đã được tạo' : 'đã được cập nhật'} thành công!`,
+      'Success', 
+      `Profile ${isNewProfile ? 'created' : 'updated'} successfully!`,
       [
         {
-          text: 'Tiếp tục',
+          text: 'Continue',
           onPress: () => {
             if (isNewProfile) {
               // New profile created - redirect to psychologist home
@@ -181,8 +277,28 @@ const EditProfile = () => {
       ]
     );
   } catch (error) {
-    const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || `Could not ${isNewProfile ? 'create' : 'update'} profile.`;
-    Alert.alert('Error', errorMessage);
+    console.log('Profile update error:', error);
+    console.log('Error response:', error.response?.data);
+    
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      let errorMessage = 'Profile update failed. Please check your data.';
+      
+      // Handle specific validation errors
+      if (errorData.education) {
+        errorMessage += '\n\nEducation errors:\n' + errorData.education.join('\n');
+      }
+      if (errorData.certifications) {
+        errorMessage += '\n\nCertification errors:\n' + errorData.certifications.join('\n');
+      }
+      if (errorData.non_field_errors) {
+        errorMessage += '\n\n' + errorData.non_field_errors.join('\n');
+      }
+      
+      Alert.alert('Update Failed', errorMessage);
+    } else {
+      Alert.alert('Update Failed', 'Network error. Please try again.');
+    }
   }
 };
 
@@ -452,6 +568,26 @@ const EditProfile = () => {
           />
         </View>
 
+        {/* Test Data Button - Only show for new profiles */}
+        {(!route.params?.profile || Object.keys(route.params.profile).length === 0) && (
+          <Animated.View style={{ transform: [{ scale: animatedValue }], width: '100%', marginBottom: 16 }}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.testButton,
+                pressed && { opacity: 0.9 },
+              ]}
+              onPress={populateTestData}
+            >
+              <LinearGradient
+                colors={['#28a745', '#20c997']}
+                style={styles.testButtonGradient}
+              >
+                <Text style={styles.testButtonText}>📝 Load Test Data</Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
+        )}
+
         <Animated.View style={{ transform: [{ scale: animatedValue }], width: '100%' }}>
           <Pressable
             style={({ pressed }) => [
@@ -681,6 +817,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  testButton: {
+    borderRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+    marginTop: 32,
+    marginBottom: 48,
+  },
+  testButtonGradient: {
+    paddingVertical: 18,
+    paddingHorizontal: 64,
+    alignItems: 'center',
+  },
+  testButtonText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
