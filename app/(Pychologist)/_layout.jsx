@@ -29,7 +29,7 @@ const Layout = () => {
         const token = await AsyncStorage.getItem('access_token');
         if (!token) return;
 
-        const response = await api.get('/api/psychologists/profile/');
+        const response = await api.get('/api/psychologists/profile/profile/');
         if (response.data && response.data.profile_picture_url) {
           setProfileImage(response.data.profile_picture_url);
         }

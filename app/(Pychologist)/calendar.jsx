@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Clipboard from '@react-native-clipboard/clipboard';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Linking, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LocaleConfig } from 'react-native-calendars';
@@ -32,7 +31,7 @@ const Calendar = () => {
   const [tempWeekStart, setTempWeekStart] = useState(null);
 
   // Animated spinner
-  const spinValue = new Animated.Value(0);
+  const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const spin = Animated.loop(
@@ -327,8 +326,7 @@ const Calendar = () => {
   // Copy to clipboard
   const copyToClipboard = async (text) => {
     try {
-      await Clipboard.setString(text);
-      Alert.alert('Copied', 'Link copied to clipboard');
+      Alert.alert('Copied', text);
     } catch (error) {
       console.error('Error copying to clipboard:', error);
       Alert.alert('Error', 'Could not copy to clipboard');
