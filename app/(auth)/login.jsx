@@ -39,7 +39,7 @@ const Login = () => {
       });
 
       console.log('Login response:', response.data);
-      
+
       const { token, user } = response.data;
 
       console.log('Token received:', token ? token.substring(0, 20) + '...' : 'null');
@@ -83,27 +83,27 @@ const Login = () => {
     }
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      // Reset animation values
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
+    useFocusEffect(
+      React.useCallback(() => {
+        // Reset animation values
+        fadeAnim.setValue(0);
+        slideAnim.setValue(50);
 
-      // Start animation again
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 1000,
+        // Start animation again
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 1000,
           useNativeDriver: false,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 1000,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 1000,
           useNativeDriver: false,
-        }),
-      ]).start();
-    }, [])
-  );
+          }),
+        ]).start();
+      }, [])
+    );
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -115,28 +115,28 @@ const Login = () => {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <Toast position="top" visibilityTime={4000} topOffset={50} />
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              if (navigation.canGoBack?.()) {
-                navigation.goBack();
-              } else {
-                router.replace('/');
-              }
-            }}
-          >
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-          <Animated.View
-            style={[
-              styles.container,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateX: slideAnim }],
-              },
-            ]}
-          >
+            <Toast position="top" visibilityTime={4000} topOffset={50} />
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => {
+                  if (navigation.canGoBack?.()) {
+                    navigation.goBack();
+                  } else {
+                    router.replace('/');
+                  }
+                }}
+              >
+              <Ionicons name="arrow-back" size={24} color="black" />
+            </TouchableOpacity>
+              <Animated.View
+                style={[
+                  styles.container,
+                  {
+                    opacity: fadeAnim,
+                    transform: [{ translateX: slideAnim }],
+                  },
+                ]}
+              >
             <Text style={styles.Welcome}>CHÀO MỪNG TRỞ LẠI!</Text>
 
             <Text style={styles.Welcome}>Facebook</Text>

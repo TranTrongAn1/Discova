@@ -1,6 +1,6 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Platform, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, FlatList, Platform, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import api from '../(auth)/api';
 
 const statusLabels = {
@@ -16,6 +16,27 @@ const ClientScreen = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Animated spinner
+  const spinValue = new Animated.Value(0);
+
+  useEffect(() => {
+    const spin = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    );
+    spin.start();
+
+    return () => spin.stop();
+  }, []);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const fetchAppointments = async () => {
     try {
@@ -187,9 +208,16 @@ const ClientScreen = () => {
 
       {/* Client List */}
       {loading ? (
-        <Text style={styles.loadingText}>Đang tải...</Text>
+        <View style={styles.loadingContainer}>
+          <Animated.View 
+            style={[
+              styles.loadingSpinner,
+              { transform: [{ rotate: spin }] }
+            ]} 
+          />
+        </View>
       ) : (
-        <FlatList
+      <FlatList
           data={filteredAppointments}
           keyExtractor={(item) => {
             const key = item?.appointment_id || item?.id || `appointment-${Math.random()}`;
@@ -339,9 +367,17 @@ const styles = StyleSheet.create({
     marginTop: 40,
     color: '#999',
   },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 40,
-    color: '#666',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: '#6c5ce7',
+    borderBottomColor: 'transparent',
   },
 });

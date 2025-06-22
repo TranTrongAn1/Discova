@@ -41,6 +41,26 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Animated spinner
+  const spinValue = new Animated.Value(0);
+
+  useEffect(() => {
+    const spin = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    );
+    spin.start();
+    return () => spin.stop();
+  }, []);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   // Form state
   const [formData, setFormData] = useState({
     first_name: '',
@@ -220,9 +240,12 @@ const Profile = () => {
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
         <View style={styles.loadingContent}>
-          <View style={styles.loadingSpinner}>
-            <Ionicons name="refresh" size={40} color="#6c63ff" />
-          </View>
+          <Animated.View
+            style={[
+              styles.loadingSpinner,
+              { transform: [{ rotate: spin }] }
+            ]}
+          />
           <Text style={styles.loadingText}>Loading your profile...</Text>
         </View>
       </View>
@@ -242,7 +265,7 @@ const Profile = () => {
             <Text style={styles.welcomeTitle}>Welcome to K&M Discova</Text>
             <Text style={styles.welcomeSubtitle}>
               Create your professional profile to connect with families and start your journey as a trusted psychologist
-            </Text>
+          </Text>
           </View>
           
           <Animated.View style={{ transform: [{ scale: animatedValue }], width: '100%' }}>
@@ -299,12 +322,12 @@ const Profile = () => {
             <View style={styles.profileAvatar}>
               <Text style={styles.avatarText}>
                 {profile.first_name?.[0] || 'P'}{profile.last_name?.[0] || 'S'}
-              </Text>
+          </Text>
             </View>
             <View style={styles.headerInfo}>
               <Text style={styles.profileName}>
                 {profile.first_name} {profile.last_name}
-              </Text>
+          </Text>
               <Text style={styles.profileTitle}>Licensed Psychologist</Text>
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={16} color="#ffd700" />
@@ -460,7 +483,7 @@ const Profile = () => {
                   <Ionicons name="checkmark" size={20} color="#fff" style={styles.buttonIcon} />
                   <Text style={styles.saveButtonText}>
                     {saving ? 'Saving...' : 'Save Changes'}
-                  </Text>
+          </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -526,28 +549,28 @@ const Profile = () => {
               <View style={styles.sectionHeader}>
                 <Ionicons name="call" size={24} color="#6c63ff" />
                 <Text style={styles.sectionTitle}>Contact Information</Text>
-              </View>
+          </View>
               <View style={styles.contactList}>
                 {profile.office_address && (
                   <View style={styles.contactItem}>
                     <Ionicons name="location" size={20} color="#6c63ff" />
                     <Text style={styles.contactText}>{profile.office_address}</Text>
-                  </View>
+          </View>
                 )}
                 {profile.website_url && (
                   <View style={styles.contactItem}>
                     <Ionicons name="globe" size={20} color="#6c63ff" />
                     <Text style={styles.contactText}>{profile.website_url}</Text>
-                  </View>
+          </View>
                 )}
                 {profile.linkedin_url && (
                   <View style={styles.contactItem}>
                     <Ionicons name="logo-linkedin" size={20} color="#6c63ff" />
                     <Text style={styles.contactText}>{profile.linkedin_url}</Text>
-                  </View>
+          </View>
                 )}
-              </View>
-            </View>
+          </View>
+          </View>
           </View>
         )}
       </ScrollView>
@@ -572,6 +595,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: '#6c63ff',
+    borderBottomColor: 'transparent',
     marginBottom: 20,
   },
   loadingText: {
@@ -753,13 +782,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+    shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+    elevation: 4,
       },
       web: {
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -902,7 +931,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+    shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 2,

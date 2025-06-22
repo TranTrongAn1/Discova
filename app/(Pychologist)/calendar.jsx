@@ -1,19 +1,55 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LocaleConfig, Calendar as RNCalendar } from 'react-native-calendars';
+import Clipboard from '@react-native-clipboard/clipboard';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Linking, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LocaleConfig } from 'react-native-calendars';
 import api from '../(auth)/api';
 
 const Calendar = () => {
   const [appointments, setAppointments] = useState([]);
   const [markedDates, setMarkedDates] = useState({});
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
+  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Add state for current week navigation
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek + 1); // Monday
+    return startOfWeek;
+  });
+
+  // Add ref for scroll control
+  const scrollViewRef = useRef(null);
+  const [tempWeekStart, setTempWeekStart] = useState(null);
+
+  // Animated spinner
+  const spinValue = new Animated.Value(0);
+
+  useEffect(() => {
+    const spin = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    );
+    spin.start();
+    return () => spin.stop();
+  }, []);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   // Configure calendar locale
   LocaleConfig.locales['vi'] = {
@@ -56,20 +92,20 @@ const Calendar = () => {
 
       // Transform API data to match our UI format
       const transformedAppointments = appointmentsData.map(appointment => ({
-        id: appointment.appointment_id,
-        parentName: appointment.parent_name || 'Unknown Parent',
-        childName: appointment.child_name || 'Unknown Child',
-        childAge: calculateAge(appointment.child_date_of_birth) || 0,
-        time: formatAppointmentTime(appointment.scheduled_start_time),
-        notes: appointment.parent_notes || 'No notes provided',
-        status: mapStatusToUI(appointment.appointment_status),
-        sessionType: appointment.session_type,
-        durationHours: appointment.duration_hours,
-        meetingAddress: appointment.meeting_address,
-        meetingLink: appointment.meeting_link,
-        scheduledStartTime: appointment.scheduled_start_time,
-        scheduledEndTime: appointment.scheduled_end_time,
-        date: formatDateForCalendar(appointment.scheduled_start_time),
+        id: appointment.appointment_id || appointment.id,
+        parentName: appointment.parent_name || appointment.parentName || 'Unknown Parent',
+        childName: appointment.child_name || appointment.childName || 'Unknown Child',
+        childAge: calculateAge(appointment.child_date_of_birth || appointment.childDateOfBirth) || 0,
+        time: formatAppointmentTime(appointment.scheduled_start_time || appointment.scheduledStartTime),
+        notes: appointment.parent_notes || appointment.notes || 'No notes provided',
+        status: appointment.appointment_status || appointment.status || 'Scheduled',
+        sessionType: appointment.session_type || appointment.sessionType || 'InPerson',
+        durationHours: appointment.duration_hours || appointment.durationHours || 1,
+        meetingAddress: appointment.meeting_address || appointment.meetingAddress,
+        meetingLink: appointment.meeting_link || appointment.meetingLink,
+        scheduledStartTime: appointment.scheduled_start_time || appointment.scheduledStartTime,
+        scheduledEndTime: appointment.scheduled_end_time || appointment.scheduledEndTime,
+        date: formatDateForCalendar(appointment.scheduled_start_time || appointment.scheduledStartTime),
         // Keep original data for API operations
         originalData: appointment
       }));
@@ -105,15 +141,23 @@ const Calendar = () => {
           marked: true,
           dotColor: getStatusColor(status),
           textColor: '#2c3e50',
-          selected: false
+          selected: false,
+          appointmentCount: 1
         };
       } else {
-        // If multiple appointments on same date, use different dot
-        marked[date].dots = marked[date].dots || [];
-        marked[date].dots.push({
-          color: getStatusColor(status),
-          key: appointment.id
-        });
+        // If multiple appointments on same date, increment count
+        marked[date].appointmentCount = (marked[date].appointmentCount || 1) + 1;
+        // Use different dot if multiple appointments
+        if (!marked[date].dots) {
+          marked[date].dots = [
+            { color: getStatusColor(status), key: appointment.id }
+          ];
+        } else {
+          marked[date].dots.push({
+            color: getStatusColor(status),
+            key: appointment.id
+          });
+        }
       }
     });
 
@@ -123,12 +167,14 @@ const Calendar = () => {
   // Get color based on appointment status
   const getStatusColor = (status) => {
     const colors = {
-      confirmed: '#4CAF50',
-      cancelled: '#F44336',
-      pending: '#FF9800',
-      completed: '#2196F3'
+      'Scheduled': '#2196F3',
+      'In_Progress': '#FF9800',
+      'Completed': '#4CAF50',
+      'Cancelled': '#F44336',
+      'No_Show': '#F44336',
+      'Payment_Pending': '#FF9800'
     };
-    return colors[status] || '#FF9800';
+    return colors[status] || '#6c757d';
   };
 
   // Helper functions
@@ -189,234 +235,104 @@ const Calendar = () => {
     return statusMap[apiStatus] || 'pending';
   };
 
+  // Fetch appointments when component mounts
   useEffect(() => {
     fetchAppointments();
   }, []);
 
+  // Fetch appointments when week changes
+  useEffect(() => {
+    fetchAppointments();
+  }, [currentWeekStart]);
+
+  // Scroll to center week when component mounts
+  useEffect(() => {
+    setTimeout(() => {
+      scrollToCenterWeek();
+    }, 100);
+  }, []);
+
+  // Handle appointment actions
   const handleAppointmentAction = async (appointment, action) => {
-    try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        Alert.alert('Error', 'Authentication required');
-        return;
-      }
+    // Get the correct appointment ID for API calls
+    const appointmentId = appointment.originalData?.appointment_id || appointment.id;
 
-      const appointmentId = appointment.originalData?.appointment_id || appointment.id;
-
-      switch (action) {
-        case 'complete':
-          console.log('Completing appointment:', appointmentId);
-          await api.post(`/api/appointments/${appointmentId}/complete/`);
-          Alert.alert('Success', 'Appointment marked as completed');
-          break;
-        case 'cancel':
-          console.log('Cancelling appointment:', appointmentId);
-          await api.post(`/api/appointments/${appointmentId}/cancel/`);
-          Alert.alert('Success', 'Appointment cancelled');
-          break;
-        case 'start':
-          console.log('Starting online session:', appointmentId);
-          console.log('Appointment ID being used:', appointmentId);
-          console.log('Full original appointment data:', appointment.originalData);
-          console.log('Appointment details:', appointment);
-          console.log('Appointment status:', appointment.status);
-          console.log('Original API status:', appointment.originalData?.appointment_status);
-          console.log('Session type:', appointment.sessionType);
-          console.log('Scheduled start time:', appointment.scheduledStartTime);
-          console.log('Payment status:', appointment.originalData?.payment_status);
-          console.log('Appointment status from API:', appointment.originalData?.appointment_status);
-          
-          // Check if appointment is in the correct status to start
-          const originalStatus = appointment.originalData?.appointment_status;
-          if (originalStatus !== 'Scheduled') {
-            Alert.alert(
-              'Cannot Start Session',
-              `Appointment status is "${originalStatus}". Only "Scheduled" appointments can be started.`
-            );
-            return;
+    switch (action) {
+      case 'view':
+        setSelectedAppointment(appointment);
+        setShowAppointmentDetails(true);
+        break;
+      case 'createZoom':
+        try {
+          const response = await api.post(`/api/appointments/${appointmentId}/create_zoom_link/`);
+          if (response.status === 200) {
+            Alert.alert('Success', 'Zoom link created successfully!');
+            await fetchAppointments(); // Refresh to get the new link
           }
-          
-          // Check payment status
-          const paymentStatus = appointment.originalData?.payment_status;
-          if (paymentStatus === 'Payment_Pending' || paymentStatus === 'Payment_Failed') {
-            Alert.alert(
-              'Cannot Start Session',
-              `Payment status is "${paymentStatus}". Payment must be completed before starting the session.`
-            );
-            return;
-          }
-          
-          // Additional validation checks
-          console.log('Meeting ID:', appointment.originalData?.meeting_id);
-          console.log('Meeting link exists:', !!appointment.originalData?.meeting_link);
-          console.log('Can be verified:', appointment.originalData?.can_be_verified);
-          console.log('Is upcoming:', appointment.originalData?.is_upcoming);
-          console.log('Is past:', appointment.originalData?.is_past);
-          
-          // Validate appointment can be started
-          const now = new Date();
-          const scheduledStart = new Date(appointment.scheduledStartTime);
-          const timeDiff = Math.abs(now - scheduledStart) / (1000 * 60); // difference in minutes
-          
-          console.log('Current time:', now);
-          console.log('Scheduled start:', scheduledStart);
-          console.log('Time difference (minutes):', timeDiff);
-          
-          // Show warning if appointment is significantly outside normal time window
-          if (timeDiff > 30) {
-            console.log('Warning: Starting session outside normal time window');
-            
-            // Show visible warning notification
-            setWarningMessage('This appointment is outside the normal time window. Proceeding anyway for testing.');
-            setShowWarning(true);
-            
-            // Also try Alert as backup
-            Alert.alert('Warning', 'This appointment is outside the normal time window. Proceeding anyway for testing.');
-            
-            // Auto-hide warning after 5 seconds
-            setTimeout(() => {
-              setShowWarning(false);
-              setWarningMessage('');
-            }, 5000);
-          }
-          
-          const apiUrl = `/api/appointments/${appointmentId}/start_online_session/`;
-          console.log('Making API call to:', apiUrl);
-          
-          // First, let's try to get the appointment details to see if there are any issues
-          try {
-            console.log('Fetching appointment details first...');
-            const detailsResponse = await api.get(`/api/appointments/${appointmentId}/`);
-            console.log('Appointment details response:', detailsResponse.data);
-          } catch (detailsError) {
-            console.error('Error fetching appointment details:', detailsError);
-          }
-          
-          const response = await api.post(apiUrl);
-          
-          console.log('API call successful');
-          console.log('Response data:', response.data);
-          
-          // Handle Zoom link creation response
-          if (response.data && response.data.appointment && response.data.appointment.meeting_link) {
-            const meetingLink = response.data.appointment.meeting_link;
-            Alert.alert(
-              'Online Session Started',
-              'Zoom meeting link has been created successfully!',
-              [
-                {
-                  text: 'Open Zoom',
-                  onPress: () => openZoomLink(meetingLink)
-                },
-                {
-                  text: 'Copy Link',
-                  onPress: () => copyToClipboard(meetingLink)
-                },
-                {
-                  text: 'OK',
-                  style: 'cancel'
-                }
-              ]
-            );
-          } else {
-            Alert.alert('Success', 'Online session started');
-          }
-          break;
-        case 'view':
-          console.log('Viewing appointment details:', appointmentId);
-          console.log('About to show appointment details inline');
-          
-          // Show details inline instead of using Alert
-          setSelectedAppointment(appointment);
-          setShowDetails(true);
-          
-          // Fallback: Also log to console
-          const detailsMessage = `Parent: ${appointment.parentName}\n` +
-            `Child: ${appointment.childName} (${appointment.childAge} years old)\n` +
-            `Time: ${appointment.time}\n` +
-            `Session Type: ${appointment.sessionType}\n` +
-            `Duration: ${appointment.durationHours} hours\n` +
-            `Status: ${appointment.status.toUpperCase()}`;
-          
-          console.log('=== APPOINTMENT DETAILS ===');
-          console.log(detailsMessage);
-          console.log('=== END APPOINTMENT DETAILS ===');
-          
-          return; // Don't refresh appointments for view action
-        case 'openZoom':
-          if (appointment.meetingLink) {
-            openZoomLink(appointment.meetingLink);
-          } else {
-            Alert.alert('No Meeting Link', 'Zoom meeting link is not available yet. Please start the session first.');
-          }
-          return; // Don't refresh appointments for openZoom action
-        default:
-          console.log('Unknown action:', action);
-          return; // Don't refresh appointments for unknown actions
-      }
-
-    } catch (err) {
-      console.error('Error performing appointment action:', err);
-      console.error('Error response data:', err.response?.data);
-      console.error('Error response status:', err.response?.status);
-      console.error('Error response headers:', err.response?.headers);
-      
-      // Log the specific error messages
-      if (err.response?.data?.non_field_errors) {
-        console.error('Non-field errors:', err.response.data.non_field_errors);
-        console.error('First non-field error:', err.response.data.non_field_errors[0]);
-      }
-      
-      let errorMessage = 'Failed to perform action. Please try again.';
-
-      if (err.response?.status === 401) {
-        errorMessage = 'Authentication expired. Please login again.';
-      } else if (err.response?.status === 403) {
-        errorMessage = 'Permission denied. You cannot perform this action.';
-      } else if (err.response?.status === 404) {
-        errorMessage = 'Appointment not found.';
-      } else if (err.response?.status === 400) {
-        // Show more detailed error information for 400 errors
-        const errorData = err.response.data;
-        if (errorData?.non_field_errors && errorData.non_field_errors.length > 0) {
-          const errorMsg = errorData.non_field_errors[0];
-          if (errorMsg.includes('cannot be started at this time')) {
-            errorMessage = 'Session cannot be started at this time. This may be due to:\n\n• Appointment is too far in the past\n• Appointment is already completed\n• Server-side timing restrictions\n\nPlease contact support if you need to start this session.';
-          } else {
-            errorMessage = `Cannot start session: ${errorData.non_field_errors.join(', ')}`;
-          }
-        } else if (errorData?.message) {
-          errorMessage = errorData.message;
-        } else if (typeof errorData === 'string') {
-          errorMessage = errorData;
-        } else {
-          errorMessage = 'Cannot start session at this time. Please check appointment status and timing.';
+        } catch (error) {
+          console.error('Error creating zoom link:', error);
+          Alert.alert('Error', 'Failed to create zoom link. Please try again.');
         }
-      }
-
-      Alert.alert('Error', errorMessage);
+        break;
+      case 'cancel':
+        Alert.alert(
+          'Cancel Appointment',
+          'Are you sure you want to mark this appointment as cancelled?',
+          [
+            { text: 'No', style: 'cancel' },
+            {
+              text: 'Yes',
+              style: 'destructive',
+              onPress: () => updateAppointmentStatus(appointmentId, 'Cancelled')
+            }
+          ]
+        );
+        break;
+      case 'noShow':
+        Alert.alert(
+          'Mark as No-Show',
+          'Are you sure you want to mark this appointment as no-show?',
+          [
+            { text: 'No', style: 'cancel' },
+            {
+              text: 'Yes',
+              style: 'destructive',
+              onPress: () => updateAppointmentStatus(appointmentId, 'No_Show')
+            }
+          ]
+        );
+        break;
+      case 'openZoom':
+        if (appointment.meetingLink) {
+          openZoomLink(appointment.meetingLink);
+        } else {
+          Alert.alert('No Meeting Link', 'Zoom meeting link is not available yet. Please create it first.');
+        }
+        break;
+      default:
+        break;
     }
   };
 
-  // Function to open Zoom link
+  // Open zoom link
   const openZoomLink = async (meetingLink) => {
     try {
-      const supported = await Linking.canOpenURL(meetingLink);
-      if (supported) {
-        await Linking.openURL(meetingLink);
-      } else {
-        Alert.alert('Error', 'Cannot open Zoom link. Please check if Zoom is installed.');
-      }
+      await Linking.openURL(meetingLink);
     } catch (error) {
-      console.error('Error opening Zoom link:', error);
-      Alert.alert('Error', 'Failed to open Zoom link');
+      console.error('Error opening zoom link:', error);
+      Alert.alert('Error', 'Could not open zoom link. Please copy and paste it manually.');
     }
   };
 
-  // Function to copy link to clipboard (placeholder for now)
-  const copyToClipboard = (text) => {
-    // For now, just show the link in an alert
-    Alert.alert('Meeting Link', `Copy this link:\n\n${text}`);
+  // Copy to clipboard
+  const copyToClipboard = async (text) => {
+    try {
+      await Clipboard.setString(text);
+      Alert.alert('Copied', 'Link copied to clipboard');
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      Alert.alert('Error', 'Could not copy to clipboard');
+    }
   };
 
   const renderStatusBadge = (status) => {
@@ -445,15 +361,250 @@ const Calendar = () => {
     setSelectedDate(day.dateString);
   };
 
+  // Get appointments for selected date
   const getAppointmentsForSelectedDate = () => {
     if (!selectedDate) return [];
-    return appointments.filter(appointment => appointment.date === selectedDate);
+
+    // Use real API data from appointments state
+    return appointments.filter(appointment => {
+      const appointmentDate = new Date(appointment.scheduledStartTime).toISOString().split('T')[0];
+      return appointmentDate === selectedDate;
+    });
+  };
+
+  // Generate week dates for the calendar strip
+  const generateWeekDates = () => {
+    const dates = [];
+    const today = new Date();
+
+    // Generate multiple weeks for smooth scrolling (3 weeks before, current week, 3 weeks after)
+    const weeksToShow = 7; // Total weeks to show
+    const startWeek = new Date(currentWeekStart);
+    startWeek.setDate(currentWeekStart.getDate() - (weeksToShow - 1) * 7 / 2); // Center the current week
+
+    for (let week = 0; week < weeksToShow; week++) {
+      for (let day = 0; day < 7; day++) {
+        const date = new Date(startWeek);
+        date.setDate(startWeek.getDate() + week * 7 + day);
+        const dateString = date.toISOString().split('T')[0];
+
+        // Check if this date has appointments
+        const dayAppointments = appointments.filter(appointment => {
+          const appointmentDate = new Date(appointment.scheduledStartTime).toISOString().split('T')[0];
+          return appointmentDate === dateString;
+        });
+
+        dates.push({
+          date: dateString,
+          day: date.getDate(),
+          isToday: date.toDateString() === today.toDateString(),
+          isSelected: selectedDate === dateString,
+          hasAppointments: dayAppointments.length > 0,
+          appointmentCount: dayAppointments.length,
+          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          weekIndex: week,
+          isCurrentWeek: week === 3 // Center week is current week
+        });
+      }
+    }
+
+    return dates;
+  };
+
+  // Week navigation functions
+  const goToPreviousWeek = () => {
+    const newWeekStart = new Date(currentWeekStart);
+    newWeekStart.setDate(currentWeekStart.getDate() - 7);
+    setCurrentWeekStart(newWeekStart);
+  };
+
+  const goToNextWeek = () => {
+    const newWeekStart = new Date(currentWeekStart);
+    newWeekStart.setDate(currentWeekStart.getDate() + 7);
+    setCurrentWeekStart(newWeekStart);
+  };
+
+  const goToCurrentWeek = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek + 1); // Monday
+    setCurrentWeekStart(startOfWeek);
+    setSelectedDate(today.toISOString().split('T')[0]);
+  };
+
+  // Generate dates for the current month view
+  const generateMonthDates = () => {
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    const startOfWeek = new Date(firstDayOfMonth);
+    startOfWeek.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay() + 1); // Monday
+
+    const dates = [];
+    const today = new Date();
+
+    // Generate 6 weeks (42 days) to ensure we cover the full month
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      const dateString = date.toISOString().split('T')[0];
+
+      // Check if this date has appointments
+      const dayAppointments = appointments.filter(appointment => {
+        const appointmentDate = new Date(appointment.scheduledStartTime).toISOString().split('T')[0];
+        return appointmentDate === dateString;
+      });
+
+      dates.push({
+        date: dateString,
+        day: date.getDate(),
+        isToday: date.toDateString() === today.toDateString(),
+        isSelected: selectedDate === dateString,
+        hasAppointments: dayAppointments.length > 0,
+        appointmentCount: dayAppointments.length,
+        isCurrentMonth: date.getMonth() === currentMonth,
+        isCurrentYear: date.getFullYear() === currentYear
+      });
+    }
+
+    return dates;
+  };
+
+  // Navigation functions
+  const goToPreviousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+    setSelectedDate(today.toISOString().split('T')[0]);
+  };
+
+  // Get month name for display
+  const getMonthName = () => {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return monthNames[currentMonth];
+  };
+
+  // Handle date selection
+  const onDateSelect = (date) => {
+    setSelectedDate(date);
+  };
+
+  // Generate time slots
+  const generateTimeSlots = () => {
+    const slots = [];
+    const startTime = new Date('2024-04-01T09:00:00');
+    const endTime = new Date('2024-04-01T18:00:00');
+    const interval = 30; // minutes
+
+    for (let currentTime = new Date(startTime); currentTime <= endTime; currentTime.setMinutes(currentTime.getMinutes() + interval)) {
+      slots.push(currentTime.toISOString().split('T')[1].substring(0, 5));
+    }
+
+    return slots;
+  };
+
+  // Get appointments for a specific time slot
+  const getAppointmentsForTimeSlot = (timeSlot) => {
+    if (!selectedDate) return [];
+
+    const time = new Date(`${selectedDate}T${timeSlot}`);
+    return appointments.filter(appointment => {
+      if (appointment.date !== selectedDate) return false;
+
+      const start = new Date(appointment.scheduledStartTime);
+      const end = new Date(appointment.scheduledEndTime);
+      return start <= time && end > time;
+    });
+  };
+
+  // Get event color based on session type
+  const getEventColor = (sessionType) => {
+    const colors = {
+      'OnlineMeeting': '#4CAF50',
+      'InPerson': '#FF9800',
+      'PhoneCall': '#2196F3',
+      'VideoCall': '#6c5ce7'
+    };
+    return colors[sessionType] || '#FF9800';
+  };
+
+  // Format time for display
+  const formatTime = (timeString) => {
+    try {
+      const time = new Date(timeString);
+      return time.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return timeString;
+    }
+  };
+
+  // Handle appointment status update
+  const updateAppointmentStatus = async (appointmentId, newStatus) => {
+    try {
+      const response = await api.patch(`/api/appointments/${appointmentId}/update_status/`, {
+        appointment_status: newStatus
+      });
+
+      if (response.status === 200) {
+        // Refresh appointments after status update
+        await fetchAppointments();
+        Alert.alert('Success', 'Appointment status updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      Alert.alert('Error', 'Failed to update appointment status. Please try again.');
+    }
+  };
+
+  // Function to scroll to center week
+  const scrollToCenterWeek = () => {
+    if (scrollViewRef.current) {
+      const centerWeekOffset = 3 * 350; // 3 weeks * 350px per week
+      scrollViewRef.current.scrollTo({ x: centerWeekOffset, animated: true });
+    }
+  };
+
+  // Handle refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAppointments();
+    setRefreshing(false);
   };
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading appointments...</Text>
+      <View style={styles.loadingContainer}>
+        <Animated.View
+          style={[
+            styles.loadingSpinner,
+            { transform: [{ rotate: spin }] }
+          ]}
+        />
       </View>
     );
   }
@@ -464,7 +615,7 @@ const Calendar = () => {
       {showWarning && (
         <View style={styles.warningContainer}>
           <Text style={styles.warningText}>⚠️ {warningMessage}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.warningCloseButton}
             onPress={() => {
               setShowWarning(false);
@@ -476,246 +627,331 @@ const Calendar = () => {
         </View>
       )}
 
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Lịch hẹn</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={styles.testWarningButton} 
-            onPress={() => {
-              setWarningMessage('This is a test warning notification!');
-              setShowWarning(true);
-              setTimeout(() => {
-                setShowWarning(false);
-                setWarningMessage('');
-              }, 5000);
-            }}
-          >
-            <Text style={styles.testWarningButtonText}>Test Warning</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
-            <Text style={styles.refreshButtonText}>Làm mới</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchAppointments}>
-            <Text style={styles.retryButtonText}>Thử lại</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Calendar */}
-      <View style={styles.calendarContainer}>
-        {(() => {
-          try {
-            return (
-              <RNCalendar
-                onDayPress={onDayPress}
-                markedDates={{
-                  ...markedDates,
-                  [selectedDate]: {
-                    ...markedDates[selectedDate],
-                    selected: true,
-                    selectedColor: '#6c5ce7'
-                  }
-                }}
-                theme={{
-                  backgroundColor: '#ffffff',
-                  calendarBackground: '#ffffff',
-                  textSectionTitleColor: '#2c3e50',
-                  selectedDayBackgroundColor: '#6c5ce7',
-                  selectedDayTextColor: '#ffffff',
-                  todayTextColor: '#6c5ce7',
-                  dayTextColor: '#2c3e50',
-                  textDisabledColor: '#d9e1e8',
-                  dotColor: '#6c5ce7',
-                  selectedDotColor: '#ffffff',
-                  arrowColor: '#6c5ce7',
-                  monthTextColor: '#2c3e50',
-                  indicatorColor: '#6c5ce7',
-                  textDayFontWeight: '300',
-                  textMonthFontWeight: 'bold',
-                  textDayHeaderFontWeight: '300',
-                  textDayFontSize: 16,
-                  textMonthFontSize: 16,
-                  textDayHeaderFontSize: 13
-                }}
-                {...(Platform.OS === 'web' && {
-                  style: { width: '100%' },
-                  hideExtraDays: true,
-                  disableMonthChange: false,
-                  firstDay: 1,
-                  hideDayNames: false,
-                  showWeekNumbers: false,
-                  onPressArrowLeft: () => {},
-                  onPressArrowRight: () => {}
-                })}
-              />
-            );
-          } catch (error) {
-            console.error('Calendar rendering error:', error);
-            return (
-              <View style={styles.calendarFallback}>
-                <Text style={styles.calendarFallbackText}>
-                  Calendar view temporarily unavailable
-                </Text>
-                <Text style={styles.calendarFallbackSubtext}>
-                  Please use the client tab to view appointments
-                </Text>
-              </View>
-            );
-          }
-        })()}
-      </View>
-
-      {/* Appointments for selected date */}
-      {selectedDate && (
-        <View style={styles.appointmentsContainer}>
-          <Text style={styles.dateTitle}>
-            Lịch hẹn ngày {new Date(selectedDate).toLocaleDateString('vi-VN')}
+        <View style={styles.headerCenter}>
+          <Text style={styles.monthName}>
+            {(tempWeekStart || currentWeekStart).toLocaleDateString('en-US', {
+              month: 'long',
+              year: 'numeric'
+            })}
           </Text>
-          <ScrollView style={styles.appointmentsList}>
-            {getAppointmentsForSelectedDate().map((appointment) => (
-              <View key={appointment.id} style={styles.appointmentCard}>
-                <View style={styles.appointmentHeader}>
-                  <Text style={styles.parentLabel}>
-                    Phụ huynh: <Text style={styles.parentName}>{appointment.parentName}</Text>
+          <TouchableOpacity style={styles.todayButton} onPress={goToCurrentWeek}>
+            <Text style={styles.todayButtonText}>Today</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Calendar Strip */}
+      <View style={styles.calendarStrip}>
+        <View style={styles.weekDays}>
+          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+            <View key={`${day}-${index}`} style={styles.weekDay}>
+              <Text style={styles.weekDayText}>{day}</Text>
+            </View>
+          ))}
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.weekStrip}
+          ref={scrollViewRef}
+          scrollEventThrottle={16}
+          pagingEnabled={false}
+          decelerationRate="normal"
+          directionalLockEnabled={false}
+          alwaysBounceHorizontal={true}
+          bounces={true}
+          onScroll={(event) => {
+            const offsetX = event.nativeEvent.contentOffset.x;
+            const weekWidth = 350; // Approximate width of one week
+            const weekIndex = Math.round(offsetX / weekWidth);
+
+            // Update temporary week for real-time month display
+            if (weekIndex !== 3) { // 3 is the center week
+              const newWeekStart = new Date(currentWeekStart);
+              newWeekStart.setDate(currentWeekStart.getDate() + (3 - weekIndex) * 7);
+              setTempWeekStart(newWeekStart);
+            } else {
+              setTempWeekStart(null);
+            }
+          }}
+          onMomentumScrollEnd={(event) => {
+            const offsetX = event.nativeEvent.contentOffset.x;
+            const weekWidth = 350; // Approximate width of one week
+            const weekIndex = Math.round(offsetX / weekWidth);
+
+            // Final update when scroll momentum ends
+            if (weekIndex !== 3) { // 3 is the center week
+              const newWeekStart = new Date(currentWeekStart);
+              newWeekStart.setDate(currentWeekStart.getDate() + (3 - weekIndex) * 7);
+              setCurrentWeekStart(newWeekStart);
+            }
+            setTempWeekStart(null);
+          }}
+        >
+          {generateWeekDates().map((date, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.dateItem,
+                date.isSelected && styles.selectedDateItem
+              ]}
+              onPress={() => onDateSelect(date.date)}
+            >
+              <Text style={styles.dayNameText}>{date.dayName}</Text>
+              <Text style={[
+                styles.dateText,
+                date.isSelected && styles.selectedDateText
+              ]}>
+                {date.day}
+              </Text>
+              {date.hasAppointments && (
+                <View style={styles.appointmentIndicator}>
+                  <Text style={styles.appointmentCount}>
+                    {date.appointmentCount > 3 ? '3+' : date.appointmentCount}
                   </Text>
-                  {renderStatusBadge(appointment.status)}
                 </View>
+              )}
+              {date.isToday && <View style={styles.todayIndicator} />}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <TouchableOpacity style={styles.expandButton}>
+          <Text style={styles.expandIcon}>⌄</Text>
+        </TouchableOpacity>
+      </View>
 
-                <Text style={styles.childInfo}>
-                  Trẻ: {appointment.childName} ({appointment.childAge} tuổi)
-                </Text>
-
-                <Text style={styles.timeLabel}>Thời gian:</Text>
-                <Text style={styles.timeText}>{appointment.time}</Text>
-
-                <Text style={styles.notesLabel}>Ghi chú:</Text>
-                <Text style={styles.notesText}>{appointment.notes}</Text>
-
-                {/* Meeting Link Section */}
-                {appointment.meetingLink && (
-                  <View style={styles.meetingLinkContainer}>
-                    <Text style={styles.meetingLinkLabel}>Zoom Meeting Link:</Text>
-                    <Text style={styles.meetingLinkText} numberOfLines={1} ellipsizeMode="tail">
-                      {appointment.meetingLink}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={styles.detailButton}
-                    onPress={() => handleAppointmentAction(appointment, 'view')}
-                  >
-                    <Text style={styles.detailButtonText}>CHI TIẾT</Text>
-                  </TouchableOpacity>
-
-                  {/* Zoom Meeting Button */}
-                  {appointment.meetingLink && (
-                    <TouchableOpacity
-                      style={[styles.detailButton, styles.zoomButton]}
-                      onPress={() => handleAppointmentAction(appointment, 'openZoom')}
-                    >
-                      <Text style={styles.zoomButtonText}>ZOOM</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {appointment.status === 'confirmed' && appointment.sessionType === 'OnlineMeeting' && (
-                    <TouchableOpacity
-                      style={[styles.detailButton, styles.startButton]}
-                      onPress={() => handleAppointmentAction(appointment, 'start')}
-                    >
-                      <Text style={styles.startButtonText}>BẮT ĐẦU</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {appointment.status === 'confirmed' && (
-                    <TouchableOpacity
-                      style={[styles.detailButton, styles.completeButton]}
-                      onPress={() => handleAppointmentAction(appointment, 'complete')}
-                    >
-                      <Text style={styles.completeButtonText}>HOÀN THÀNH</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+      {/* Day Schedule View */}
+      {selectedDate && (
+        <View style={styles.scheduleContainer}>
+          <View style={styles.scheduleHeader}>
+            <Text style={styles.scheduleDateTitle}>
+              Schedule for {new Date(selectedDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </Text>
+          </View>
+          <ScrollView
+            style={styles.scheduleScroll}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#6c5ce7']}
+                tintColor="#6c5ce7"
+              />
+            }
+          >
+            {loading ? (
+              <View style={styles.emptySchedule}>
+                <Text style={styles.emptyScheduleText}>Loading appointments...</Text>
               </View>
-            ))}
-
-            {getAppointmentsForSelectedDate().length === 0 && (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Không có lịch hẹn nào trong ngày này</Text>
+            ) : getAppointmentsForSelectedDate().length > 0 ? (
+              getAppointmentsForSelectedDate().map((appointment, index) => (
+                <TouchableOpacity
+                  key={appointment.id}
+                  style={styles.appointmentCard}
+                  onPress={() => handleAppointmentAction(appointment, 'view')}
+                >
+                  <View style={[
+                    styles.appointmentAccent,
+                    { backgroundColor: getEventColor(appointment.sessionType) }
+                  ]} />
+                  <View style={styles.appointmentContent}>
+                    <Text style={styles.appointmentTitle}>
+                      {appointment.childName} - {appointment.sessionType}
+                    </Text>
+                    <Text style={styles.appointmentTime}>
+                      {formatTime(appointment.scheduledStartTime)} - {formatTime(appointment.scheduledEndTime)}
+                    </Text>
+                    <Text style={styles.appointmentParent}>
+                      Parent: {appointment.parentName}
+                    </Text>
+                    <View style={styles.appointmentStatus}>
+                      <Text style={[
+                        styles.statusText,
+                        { color: getStatusColor(appointment.status) }
+                      ]}>
+                        {appointment.status}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : error ? (
+              <View style={styles.emptySchedule}>
+                <Text style={styles.emptyScheduleText}>Error: {error}</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={fetchAppointments}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.emptySchedule}>
+                <Text style={styles.emptyScheduleText}>No appointments scheduled for this day</Text>
               </View>
             )}
           </ScrollView>
         </View>
       )}
 
-      {/* Legend */}
-      <View style={styles.legendContainer}>
-        <Text style={styles.legendTitle}>Chú thích:</Text>
-        <View style={styles.legendItems}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
-            <Text style={styles.legendText}>Đã xác nhận</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#FF9800' }]} />
-            <Text style={styles.legendText}>Chờ xác nhận</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#2196F3' }]} />
-            <Text style={styles.legendText}>Đã hoàn thành</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
-            <Text style={styles.legendText}>Đã hủy</Text>
-          </View>
+      {/* No date selected message */}
+      {!selectedDate && (
+        <View style={styles.noDateSelectedContainer}>
+          <Text style={styles.noDateSelectedText}>
+            Select a date from the calendar above to view your schedule
+          </Text>
         </View>
-      </View>
+      )}
 
-      {/* Inline Details Display */}
-      {showDetails && selectedAppointment && (
-        <View style={styles.detailsOverlay}>
-          <View style={styles.detailsModal}>
-            <View style={styles.detailsHeader}>
-              <Text style={styles.detailsTitle}>Chi tiết lịch hẹn</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
+      {/* Appointment Details Modal */}
+      {showAppointmentDetails && selectedAppointment && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Professional Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleContainer}>
+                <Text style={styles.modalTitle}>Appointment Details</Text>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedAppointment.status) }]}>
+                  <Text style={styles.statusBadgeText}>{selectedAppointment.status}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.closeModalButton}
                 onPress={() => {
-                  setShowDetails(false);
+                  setShowAppointmentDetails(false);
                   setSelectedAppointment(null);
                 }}
               >
-                <Text style={styles.closeButtonText}>✕</Text>
+                <Text style={styles.closeModalText}>✕</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.detailsContent}>
-              <Text style={styles.detailLabel}>Phụ huynh:</Text>
-              <Text style={styles.detailValue}>{selectedAppointment.parentName}</Text>
-              
-              <Text style={styles.detailLabel}>Trẻ:</Text>
-              <Text style={styles.detailValue}>{selectedAppointment.childName} ({selectedAppointment.childAge} tuổi)</Text>
-              
-              <Text style={styles.detailLabel}>Thời gian:</Text>
-              <Text style={styles.detailValue}>{selectedAppointment.time}</Text>
-              
-              <Text style={styles.detailLabel}>Loại phiên:</Text>
-              <Text style={styles.detailValue}>{selectedAppointment.sessionType}</Text>
-              
-              <Text style={styles.detailLabel}>Thời lượng:</Text>
-              <Text style={styles.detailValue}>{selectedAppointment.durationHours} giờ</Text>
-              
-              <Text style={styles.detailLabel}>Trạng thái:</Text>
-              <Text style={styles.detailValue}>{selectedAppointment.status.toUpperCase()}</Text>
-              
-              <Text style={styles.detailLabel}>Ghi chú:</Text>
-              <Text style={styles.detailValue}>{selectedAppointment.notes}</Text>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Patient Information */}
+              <View style={styles.infoSection}>
+                <Text style={styles.sectionTitle}>Patient Information</Text>
+                <View style={styles.infoCard}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Child Name</Text>
+                    <Text style={styles.infoValue}>{selectedAppointment.childName}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Age</Text>
+                    <Text style={styles.infoValue}>{selectedAppointment.childAge} years old</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Parent/Guardian</Text>
+                    <Text style={styles.infoValue}>{selectedAppointment.parentName}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Session Details */}
+              <View style={styles.infoSection}>
+                <Text style={styles.sectionTitle}>Session Details</Text>
+                <View style={styles.infoCard}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Date & Time</Text>
+                    <Text style={styles.infoValue}>
+                      {new Date(selectedAppointment.scheduledStartTime).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Time</Text>
+                    <Text style={styles.infoValue}>
+                      {formatTime(selectedAppointment.scheduledStartTime)} - {formatTime(selectedAppointment.scheduledEndTime)}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Session Type</Text>
+                    <Text style={styles.infoValue}>{selectedAppointment.sessionType}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Notes Section */}
+              {selectedAppointment.notes && (
+                <View style={styles.infoSection}>
+                  <Text style={styles.sectionTitle}>Notes</Text>
+                  <View style={styles.notesCard}>
+                    <Text style={styles.notesText}>{selectedAppointment.notes}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Meeting Link Section */}
+              {selectedAppointment.meetingLink && (
+                <View style={styles.infoSection}>
+                  <Text style={styles.sectionTitle}>Meeting Link</Text>
+                  <View style={styles.linkCard}>
+                    <Text style={styles.linkText} numberOfLines={2} ellipsizeMode="tail">
+                      {selectedAppointment.meetingLink}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </ScrollView>
+
+            {/* Professional Action Buttons */}
+            <View style={styles.modalActions}>
+              <View style={styles.actionButtonsRow}>
+                {selectedAppointment.sessionType === 'OnlineMeeting' && !selectedAppointment.meetingLink && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.primaryButton]}
+                    onPress={() => handleAppointmentAction(selectedAppointment, 'createZoom')}
+                  >
+                    <Text style={styles.actionButtonText}>Create Meeting Link</Text>
+                  </TouchableOpacity>
+                )}
+
+                {selectedAppointment.meetingLink && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.primaryButton]}
+                    onPress={() => handleAppointmentAction(selectedAppointment, 'openZoom')}
+                  >
+                    <Text style={styles.actionButtonText}>Join Meeting</Text>
+                  </TouchableOpacity>
+                )}
+
+                {selectedAppointment.meetingLink && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.secondaryButton]}
+                    onPress={() => copyToClipboard(selectedAppointment.meetingLink)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Copy Link</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.actionButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.warningButton]}
+                  onPress={() => handleAppointmentAction(selectedAppointment, 'cancel')}
+                >
+                  <Text style={styles.actionButtonText}>Cancel Appointment</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.dangerButton]}
+                  onPress={() => handleAppointmentAction(selectedAppointment, 'noShow')}
+                >
+                  <Text style={styles.actionButtonText}>Mark as No-Show</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       )}
@@ -732,93 +968,150 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#6c5ce7',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  monthName: {
+    fontSize: 20,
+    fontStyle: 'italic',
+    fontFamily: 'serif',
+    color: 'white',
+    fontWeight: '500',
+  },
+  todayButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  todayButtonText: {
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '600',
+  },
+  calendarStrip: {
     backgroundColor: 'white',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-      },
-    }),
   },
-  headerTitle: {
+  weekDays: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 12,
+  },
+  weekDay: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  weekDayText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6c757d',
+  },
+  weekStrip: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginBottom: 12,
+    paddingHorizontal: 20,
+    minWidth: 2450, // 7 weeks * 350px per week
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+  },
+  dateItem: {
+    width: 50,
+    height: 60,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginVertical: 2,
+    marginHorizontal: 2,
+    paddingVertical: 4,
+  },
+  selectedDateItem: {
+    backgroundColor: 'white',
+    borderWidth: 2,
+    borderColor: '#6c5ce7',
+  },
+  dayNameText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6c757d',
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  selectedDateText: {
+    fontWeight: 'bold',
+    color: '#6c5ce7',
+  },
+  todayIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#6c5ce7',
+  },
+  expandButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  expandIcon: {
+    fontSize: 16,
+    color: '#6c757d',
+  },
+  scheduleContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  scheduleHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  scheduleDateTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#2c3e50',
+  },
+  scheduleScroll: {
     flex: 1,
+    paddingHorizontal: 20,
   },
-  headerButtons: {
+  timeSlotRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    minHeight: 60,
+    paddingVertical: 8,
   },
-  testWarningButton: {
-    backgroundColor: '#6c5ce7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 8,
+  timeColumn: {
+    width: 60,
+    paddingTop: 8,
   },
-  testWarningButtonText: {
-    color: 'white',
+  timeText: {
     fontSize: 12,
-    fontWeight: '600',
+    color: '#6c757d',
+    fontWeight: '500',
   },
-  refreshButton: {
-    backgroundColor: '#6c5ce7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+  eventsColumn: {
+    flex: 1,
+    paddingLeft: 16,
   },
-  refreshButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  errorContainer: {
-    backgroundColor: '#f8d7da',
-    borderColor: '#f5c6cb',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    margin: 16,
-  },
-  errorText: {
-    color: '#721c24',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  retryButton: {
-    backgroundColor: '#dc3545',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 40,
-    color: '#666',
-    fontSize: 16,
-  },
-  calendarContainer: {
+  eventCard: {
+    flexDirection: 'row',
     backgroundColor: 'white',
-    margin: 16,
     borderRadius: 12,
+    marginBottom: 8,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -833,6 +1126,44 @@ const styles = StyleSheet.create({
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
       },
     }),
+  },
+  eventAccent: {
+    width: 4,
+    backgroundColor: '#FF9800',
+  },
+  eventContent: {
+    flex: 1,
+    padding: 16,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 4,
+  },
+  eventTime: {
+    fontSize: 14,
+    color: '#6c757d',
+    fontWeight: '500',
+  },
+  eventNotes: {
+    fontSize: 13,
+    color: '#6c757d',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: '#6c5ce7',
+    borderBottomColor: 'transparent',
   },
   appointmentsContainer: {
     flex: 1,
@@ -848,24 +1179,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appointmentCard: {
+    flexDirection: 'row',
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-      },
-    }),
+    borderRadius: 8,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   appointmentHeader: {
     flexDirection: 'row',
@@ -889,9 +1211,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   statusText: {
-    color: 'white',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   childInfo: {
     fontSize: 14,
@@ -903,11 +1226,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2c3e50',
     marginBottom: 4,
-  },
-  timeText: {
-    fontSize: 14,
-    color: '#2c3e50',
-    marginBottom: 8,
   },
   notesLabel: {
     fontSize: 14,
@@ -1000,41 +1318,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  calendarFallback: {
-    flex: 1,
-    justifyContent: 'center',
+  warningContainer: {
+    backgroundColor: '#FF9800',
+    padding: 16,
+    margin: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 40,
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+      },
+    }),
   },
-  calendarFallbackText: {
-    color: '#6c757d',
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  calendarFallbackSubtext: {
-    color: '#6c757d',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  meetingLinkContainer: {
-    marginBottom: 16,
-  },
-  meetingLinkLabel: {
+  warningText: {
+    color: 'white',
     fontSize: 14,
     fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 12,
   },
-  meetingLinkText: {
-    fontSize: 14,
-    color: '#6c757d',
-    lineHeight: 20,
+  warningCloseButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 4,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  zoomButton: {
-    backgroundColor: '#6c5ce7',
-  },
-  zoomButtonText: {
+  warningCloseText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
@@ -1089,49 +1412,293 @@ const styles = StyleSheet.create({
     color: '#6c757d',
     marginBottom: 16,
   },
-  warningContainer: {
-    backgroundColor: '#FF9800',
-    padding: 16,
-    margin: 16,
-    borderRadius: 8,
+  meetingLinkContainer: {
+    marginBottom: 16,
+  },
+  meetingLinkLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 4,
+  },
+  meetingLinkText: {
+    fontSize: 14,
+    color: '#6c757d',
+    lineHeight: 20,
+  },
+  zoomButton: {
+    backgroundColor: '#6c5ce7',
+  },
+  zoomButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  appointmentIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#6c5ce7',
+    borderRadius: 12,
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+  },
+  appointmentCount: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  eventStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-      },
-    }),
+    marginTop: 8,
   },
-  warningText: {
+  cancelButton: {
+    backgroundColor: '#F44336',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  cancelButtonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
+  },
+  noDateSelectedContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noDateSelectedText: {
+    color: '#6c757d',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  appointmentAccent: {
+    width: 4,
+    backgroundColor: '#FF9800',
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  appointmentContent: {
+    flex: 1,
+    padding: 16,
+  },
+  appointmentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 4,
+  },
+  appointmentTime: {
+    fontSize: 14,
+    color: '#6c757d',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  appointmentParent: {
+    fontSize: 14,
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  appointmentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  emptySchedule: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyScheduleText: {
+    color: '#6c757d',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f4',
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
     marginRight: 12,
   },
-  warningCloseButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 4,
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 12,
-    width: 24,
-    height: 24,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'white',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  closeModalButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8f9fa',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  warningCloseText: {
+  closeModalText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6c757d',
+  },
+  modalBody: {
+    padding: 24,
+    maxHeight: 400,
+  },
+  infoSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 12,
+    letterSpacing: 0.3,
+  },
+  infoCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#495057',
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#2c3e50',
+    fontWeight: '500',
+    flex: 2,
+    textAlign: 'right',
+  },
+  notesCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#2c3e50',
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  linkCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  linkText: {
+    fontSize: 14,
+    color: '#2c3e50',
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  modalActions: {
+    padding: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f3f4',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  actionButton: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+    letterSpacing: 0.3,
+  },
+  primaryButton: {
+    backgroundColor: '#6c5ce7',
+  },
+  secondaryButton: {
+    backgroundColor: '#2196F3',
+  },
+  warningButton: {
+    backgroundColor: '#FF9800',
+  },
+  dangerButton: {
+    backgroundColor: '#F44336',
+  },
+  secondaryButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });
 
