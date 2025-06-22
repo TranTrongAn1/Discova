@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as AuthSession from 'expo-auth-session';
+import Constants from 'expo-constants';
 import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as Google from 'expo-auth-session/providers/google';
 import { router } from 'expo-router';
@@ -22,13 +23,10 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 
+
 WebBrowser.maybeCompleteAuthSession();
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const redirectUri = AuthSession.makeRedirectUri({
-  useProxy: true,
-  scheme: 'discova',
-});
 
 const Register = ({ onSwitch }) => {
   const [email, setEmail] = useState('');
@@ -37,32 +35,28 @@ const Register = ({ onSwitch }) => {
   const [showPwd, setShowPwd] = useState(false);
   const [showPwd1, setShowPwd1] = useState(false);
   const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [userType, setUserType] = useState('Parent');
-  const [userTimezone, setUserTimezone] = useState('UTC');
+  const [userType, setUserType] = useState('Parent'); // Default value
+  const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
 
-  // Google Auth
-  const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
-    expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    iosClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    androidClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    webClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    scopes: ['profile', 'email'],
-    redirectUri,
-  });
+
+// For EAS builds, use your custom scheme
+const redirectUri = Constants.expoConfig?.hostUri 
+  ? 'https://auth.expo.io/@fusia/Discova'  // Development (Expo Go only)
+  : 'discova://';  // EAS builds (your deployed app)
+
+const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
+  expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
+  iosClientId: '973045964577-53veuk6btpi3da7h9gerl112ieoauef7.apps.googleusercontent.com', 
+  androidClientId: '973045964577-3bffk3umbtsdgm5f26ud3folptakl2sv.apps.googleusercontent.com',
+  scopes: ['profile', 'email'],
+  redirectUri,
+});
 
   useEffect(() => {
     if (requestGoogle) {
-      console.log("Generated proxy URI:", redirectUri);
-      const customUri = AuthSession.makeRedirectUri({ useProxy: false });
-      const schemeUri = AuthSession.makeRedirectUri({ scheme: 'discova', useProxy: false });
-
-      console.log("=== REDIRECT URI DEBUG ===");
-      console.log("Custom URI:", customUri);
-      console.log("Scheme URI:", schemeUri);
-      console.log("Request config:", JSON.stringify(requestGoogle, null, 2));
-      console.log("========================");
+      console.log("Actual redirect URI:", redirectUri);
     }
-  }, [requestGoogle]);
+  }, [requestGoogle, responseGoogle]);
 
   useEffect(() => {
     console.log("=== RESPONSE DEBUG ===");

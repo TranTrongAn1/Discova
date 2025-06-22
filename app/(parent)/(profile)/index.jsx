@@ -9,7 +9,6 @@ const Profile = () => {
   const [userInfo, setUserInfo] = useState(null);
   const profileImage = null; // Replace this with your image URL or null
   const settingsOptions = [
-    { label: 'Gói đăng ký', route: 'subscription' },
     { label: 'Thông tin cơ bản', route: 'info' },
     { label: 'Hồ sơ của bé', route: 'childRecord' },
     { label: 'Thông tin đặt lịch', route: 'bookingInfo' },

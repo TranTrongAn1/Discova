@@ -4,6 +4,7 @@
     "slug": "Discova",
     "version": "1.0.0",
     "orientation": "portrait",
+    "owner": "fusia",
     "icon": "./assets/images/app.png",
     "scheme": "discova",
     "owner": "fusia", 
@@ -19,7 +20,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.fusia.discova"
+       "package": "com.fusia.Discova"
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +43,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4083ffc9-d234-47b4-953c-813c1cf70b7a"
+      }
     }
   }
 }
