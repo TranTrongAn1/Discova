@@ -72,13 +72,12 @@ useEffect(() => {
       <Text style={styles.sectionTitle}>Dịch vụ</Text>
       <Text style={styles.introduction}>
         {offers_initial_consultation ? 'Tư vấn trực tiếp, ' : ''}
-        {offers_online_sessions ? 'Tư vấn online, ' : ''}
-        {services_offered?.join(', ')}
+        {offers_online_sessions ? 'Tư vấn online' : ''}
       </Text>
 
       <Text style={styles.price}>
-        Giá tư vấn online: {hourly_rate} VNĐ{"\n"}
-        Giá tư vấn trực tiếp: {initial_consultation_rate} VNĐ
+        Giá tư vấn online: {hourly_rate}/ 1 giờ VNĐ{"\n"}
+        Giá tư vấn trực tiếp: {initial_consultation_rate}/ 1 buổi VNĐ
       </Text>
 
 <View style={styles.buttonRow}>

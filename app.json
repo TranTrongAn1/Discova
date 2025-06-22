@@ -4,12 +4,14 @@
     "slug": "Discova",
     "version": "1.0.0",
     "orientation": "portrait",
+    "owner": "fusia",
     "icon": "./assets/images/app.png",
     "scheme": "discova",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fusia.discova"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +19,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.fusia.Discova"
+       "package": "com.fusia.Discova"
     },
     "web": {
       "bundler": "metro",

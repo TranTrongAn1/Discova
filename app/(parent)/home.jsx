@@ -1,4 +1,4 @@
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Linking, Alert } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
@@ -6,6 +6,8 @@ import { router } from 'expo-router';
 import axios from 'axios';
 import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ExternalLink, Brain, Heart, Users, Baby, Lightbulb } from 'lucide-react-native';
+
 const problemsData = [
   'Rối loạn lo âu',
   'Hướng nghiệp cho con',
@@ -14,49 +16,86 @@ const problemsData = [
   'Trầm cảm',
   'Cải thiện mối quan hệ'
 ];
-const user = {
-  name: 'Ronaldo',
-}
-const allAppointments = [
+
+const psychologyResources = [
   {
-    expert: 'ThS. Trần Thị Thu Vân',
-    service: 'Tư vấn online',
-    time: '17:00',
-    date: '2025-05-26',
-    status: 'upcoming',
-    user: {
-      name: 'Nguyễn Thị Mai',
-      phone: '0375377310',
-      email: 'mainguyen123@gmail.com'
-    }
+    id: 1,
+    title: "Child Psychology Assessment",
+    description: "Comprehensive psychological evaluation tools and developmental milestone assessments for children aged 3-17. Identify learning difficulties, behavioral patterns, and emotional development.",
+    iconName: "Baby",
+    link: "https://www.childmind.org/",
+    linkText: "Take Child Assessment",
+    backgroundColor: "#EBF4FF"
   },
   {
-    expert: 'ThS. Nguyễn Văn B',
-    service: 'Thăm khám trực tiếp',
-    time: '09:00',
-    date: '2025-05-27',
-    status: 'upcoming',
-    user: {
-      name: 'Trần Văn A',
-      phone: '0987654321',
-      email: 'tranvana@example.com'
-    }
+    id: 2,
+    title: "Mental Health Screening",
+    description: "Professional-grade screening tools for anxiety, depression, and stress disorders. Get insights into your mental wellbeing with evidence-based questionnaires.",
+    iconName: "Brain",
+    link: "https://www.psychology.com/",
+    linkText: "Start Mental Health Quiz",
+    backgroundColor: "#F3E8FF"
+  },
+  {
+    id: 3,
+    title: "Relationship Compatibility",
+    description: "Discover your attachment style and relationship patterns. Learn about communication styles, conflict resolution, and building stronger connections.",
+    iconName: "Heart",
+    link: "https://www.gottman.com/",
+    linkText: "Assess Your Relationship",
+    backgroundColor: "#FEF2F2"
+  },
+  {
+    id: 4,
+    title: "Personality Insights",
+    description: "Explore your personality traits, cognitive preferences, and behavioral tendencies. Understand your strengths and areas for personal growth.",
+    iconName: "Users",
+    link: "https://www.16personalities.com/",
+    linkText: "Discover Your Type",
+    backgroundColor: "#F0FDF4"
+  },
+  {
+    id: 5,
+    title: "Cognitive Function Test",
+    description: "Evaluate memory, attention, processing speed, and executive function. Ideal for tracking cognitive health and identifying potential concerns.",
+    iconName: "Lightbulb",
+    link: "https://www.cambridgebrainsciences.com/",
+    linkText: "Test Cognitive Ability",
+    backgroundColor: "#FFFBEB"
   }
 ];
 
-const topPsychologists = psychologists
-  .sort((a, b) => {
-    const scoreA = a.rating * a.numberOfReviews;
-    const scoreB = b.rating * b.numberOfReviews;
-    return scoreB - scoreA;
-  })
-  .slice(0, 3); // Get top 3
+// Alternative approach with better error handling
+const handleLinkPress = async (url) => {
+  try {
+    // For web URLs, we can skip the canOpenURL check
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      await Linking.openURL(url);
+    } else {
+      // For other URL schemes, check if supported first
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          'Cannot Open Link',
+          'This type of link is not supported on your device.',
+          [{ text: 'OK' }]
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Failed to open URL:', error);
+    Alert.alert(
+      'Cannot Open Link',
+      'Unable to open the link. Please try again later.',
+      [{ text: 'OK' }]
+    );
+  }
+};
 
 // Function to format date
 const formatDate = (dateString) => {
-
-
-
   const date = new Date(dateString);
   const day = date.getDate();
   const month = date.getMonth() + 1;
@@ -69,9 +108,25 @@ const formatDate = (dateString) => {
   return `${dayOfWeek}, ${day}/${month}/${year}`;
 };
 
-const upcomingAppointments = allAppointments
-  .filter(app => app.status === 'upcoming')
-  .sort((a, b) => new Date(a.date) - new Date(b.date));
+// Helper function to render icons
+const renderIcon = (iconName) => {
+  const iconProps = { size: 32, color: "#4F46E5" };
+  
+  switch (iconName) {
+    case "Baby":
+      return <Baby {...iconProps} />;
+    case "Brain":
+      return <Brain {...iconProps} />;
+    case "Heart":
+      return <Heart {...iconProps} />;
+    case "Users":
+      return <Users {...iconProps} />;
+    case "Lightbulb":
+      return <Lightbulb {...iconProps} />;
+    default:
+      return <Brain {...iconProps} />;
+  }
+};
 
 const Home = () => {
   const [userName, setUserName] = useState(null); // default is null
@@ -132,6 +187,7 @@ const Home = () => {
 
     fetchUserName();
   }, []);
+
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
@@ -142,7 +198,6 @@ const Home = () => {
         <Text style={styles.text}>
           Chào buổi sáng{userName ? `, ${userName}` : ''}
         </Text>
-
 
         <View style={styles.searchWrap}>
           <Text style={styles.searchTitle}>
@@ -179,6 +234,7 @@ const Home = () => {
             ))}
           </View>
         </View>
+
         <Text style={styles.text}>Lịch hẹn sắp tới</Text>
         {nextAppointment ? (
           <View style={styles.appointmentContainer}>
@@ -230,32 +286,61 @@ const Home = () => {
           <Text style={[styles.cardText, { marginLeft: 20 }]}>Không có lịch hẹn sắp tới.</Text>
         )}
 
-
-      </View>
-      <Text style={styles.text}>Các chuyên gia nổi bật</Text>
-
-      <View style={styles.topPsychContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {topPsychologists.map((psych, index) => (
-            <View key={index} style={styles.psychCard}>
-              <Image source={{ uri: psych.img }} style={styles.psychImage} />
-              <Text style={styles.psychName}>{psych.name}</Text>
-              <Text numberOfLines={2} style={styles.psychDescription}>{psych.des}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                <Text>⭐ {psych.rating} ({psych.numberOfReviews})</Text>
+        {/* Psychology Resources Section - Fixed to React Native */}
+        <View style={styles.resourcesContainer}>
+          <Text style={styles.resourcesTitle}>
+            Psychology Resources & Assessments
+          </Text>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.resourcesScrollView}
+            contentContainerStyle={styles.resourcesScrollContent}
+          >
+            {psychologyResources.map((resource) => (
+              <View
+                key={resource.id}
+                style={[styles.resourceCard, { backgroundColor: resource.backgroundColor }]}
+              >
+                {/* Header with Icon */}
+                <View style={styles.resourceCardHeader}>
+                  <View style={styles.resourceIconContainer}>
+                    {renderIcon(resource.iconName)}
+                  </View>
+                  <Text style={styles.resourceCardTitle} numberOfLines={2}>
+                    {resource.title}
+                  </Text>
+                </View>
+                
+                {/* Description */}
+                <Text style={styles.resourceDescription} numberOfLines={4}>
+                  {resource.description}
+                </Text>
+                
+                {/* Link Button */}
+                <TouchableOpacity
+                  style={styles.resourceLinkButton}
+                  onPress={() => handleLinkPress(resource.link)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.resourceLinkButtonText}>{resource.linkText}</Text>
+                  <ExternalLink size={16} color="#374151" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.bookButton}>
-                <Text style={styles.bookButtonText}>Đặt hẹn nhanh</Text>
-              </TouchableOpacity>
-            </View>
+            ))}
+          </ScrollView>
+          
+          {/* Scroll Indicator */}
+          <View style={styles.resourcesScrollIndicator}>
+            <Text style={styles.resourcesScrollText}>Swipe to explore more resources →</Text>
+          </View>
+        </View>
 
-          ))}
-
-        </ScrollView>
+        <TouchableOpacity onPress={() => router.push('/(booking)/psychologistsList')}>
+          <Text style={styles.more}>Tìm kiếm các chuyên gia khác phù hợp </Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={() => router.push('/(booking)/psychologistsList')}>
-        <Text style={styles.more}>Xem thêm chuyên gia khác </Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -382,13 +467,111 @@ const styles = StyleSheet.create({
   bold: {
     fontWeight: 'bold',
   },
+  // Psychology Resources Styles
+  resourcesContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+  },
+  resourcesTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  resourcesScrollView: {
+    flexGrow: 0,
+  },
+  resourcesScrollContent: {
+    paddingRight: 16,
+  },
+  resourceCard: {
+    width: 300,
+    height: 280,
+    borderRadius: 16,
+    padding: 20,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  resourceCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  resourceIconContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  resourceCardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    flex: 1,
+    lineHeight: 24,
+  },
+  resourceDescription: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginBottom: 20,
+    flex: 1,
+  },
+  resourceLinkButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  resourceLinkButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginRight: 8,
+  },
+  resourcesScrollIndicator: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  resourcesScrollText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
   //pyschologist styles
   topPsychContainer: {
     marginTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-
   psychCard: {
     backgroundColor: '#fff',
     padding: 12,
@@ -405,7 +588,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   psychImage: {
     width: 100,
     height: 100,
@@ -414,7 +596,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderWidth: 1,
   },
-
   psychName: {
     fontWeight: 'bold',
     fontSize: 13,
@@ -423,7 +604,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     color: '#333',
   },
-
   psychDescription: {
     fontSize: 12,
     color: '#555',
@@ -433,12 +613,12 @@ const styles = StyleSheet.create({
   },
   bookButton: {
     paddingVertical: 8,
-    paddingHorizontal: 12, // Reduced from 60 to 12
+    paddingHorizontal: 12,
     backgroundColor: '#7B68EE',
     borderRadius: 20,
     marginTop: 10,
-    alignSelf: 'stretch', // Make button stretch to full width of card
-    minWidth: '100%', // Ensure full width
+    alignSelf: 'stretch',
+    minWidth: '100%',
   },
   bookButtonText: {
     color: '#fff',
@@ -453,5 +633,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-
 });

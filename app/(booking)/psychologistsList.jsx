@@ -58,7 +58,7 @@ const PsychologistsList = () => {
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      <Image source={{ uri: PLACEHOLDER_IMAGE }} style={styles.image} />
+      <Image source={{ uri: item.profile_picture_url}} style={styles.image} />
       <View style={styles.cardContent}>
         <Text style={styles.name}>{item.full_name}</Text>
         <Text style={styles.experience}>Kinh nghiệm: {item.years_of_experience} năm</Text>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   image: {
     width: 70,
     height: 70,
-    borderRadius: 8,
+    borderRadius: 50,
     marginRight: 10,
   },
   cardContent: {

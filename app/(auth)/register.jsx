@@ -21,13 +21,12 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as AuthSession from 'expo-auth-session';
-
+import Constants from 'expo-constants';
 
 
 WebBrowser.maybeCompleteAuthSession();
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
 
 const Register = ({ onSwitch }) => {
   const [email, setEmail] = useState('');
@@ -38,19 +37,25 @@ const Register = ({ onSwitch }) => {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [userType, setUserType] = useState('Parent'); // Default value
   const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
-  // Google
-  const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
-    expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-    iosClientId: '973045964577-53veuk6btpi3da7h9gerl112ieoauef7.apps.googleusercontent.com', // same here for now
-    androidClientId: '973045964577-3bffk3umbtsdgm5f26ud3folptakl2sv.apps.googleusercontent.com',
-    scopes: ['profile', 'email'],
-  });
+
+
+// For EAS builds, use your custom scheme
+const redirectUri = Constants.expoConfig?.hostUri 
+  ? 'https://auth.expo.io/@fusia/Discova'  // Development (Expo Go only)
+  : 'discova://';  // EAS builds (your deployed app)
+
+const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
+  expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
+  iosClientId: '973045964577-53veuk6btpi3da7h9gerl112ieoauef7.apps.googleusercontent.com', 
+  androidClientId: '973045964577-3bffk3umbtsdgm5f26ud3folptakl2sv.apps.googleusercontent.com',
+  scopes: ['profile', 'email'],
+  redirectUri,
+});
+
   useEffect(() => {
     if (requestGoogle) {
-      console.log("Correct redirect URI:", AuthSession.makeRedirectUri({ useProxy: true }));
-
+      console.log("Actual redirect URI:", redirectUri);
     }
-    // ... rest of your useEffect for handling response
   }, [requestGoogle, responseGoogle]);
 
 
