@@ -1,11 +1,10 @@
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import Logo from '../../assets/images/Logo.png';
-import psychologists from '../(Pychologist)/pyschcologists';
-import { router } from 'expo-router';
-import axios from 'axios';
-import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import api from '../(auth)/api';
+import Logo from '../../assets/images/Logo.png';
+
 const problemsData = [
   'Rối loạn lo âu',
   'Hướng nghiệp cho con',
@@ -14,9 +13,11 @@ const problemsData = [
   'Trầm cảm',
   'Cải thiện mối quan hệ'
 ];
+
 const user = {
   name: 'Ronaldo',
 }
+
 const allAppointments = [
   {
     expert: 'ThS. Trần Thị Thu Vân',
@@ -44,19 +45,8 @@ const allAppointments = [
   }
 ];
 
-const topPsychologists = psychologists
-  .sort((a, b) => {
-    const scoreA = a.rating * a.numberOfReviews;
-    const scoreB = b.rating * b.numberOfReviews;
-    return scoreB - scoreA;
-  })
-  .slice(0, 3); // Get top 3
-
 // Function to format date
 const formatDate = (dateString) => {
-
-
-
   const date = new Date(dateString);
   const day = date.getDate();
   const month = date.getMonth() + 1;
@@ -77,6 +67,50 @@ const Home = () => {
   const [userName, setUserName] = useState(null); // default is null
   const [loading, setLoading] = useState(true);
   const [nextAppointment, setNextAppointment] = useState(null);
+  const [topPsychologists, setTopPsychologists] = useState([]);
+
+  // Fetch top psychologists from API
+  useEffect(() => {
+    const fetchTopPsychologists = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await api.get('/api/psychologists/marketplace/');
+        
+        if (response.data && response.data.results) {
+          // Sort by profile completeness and experience, then take top 3
+          const sorted = response.data.results
+            .sort((a, b) => {
+              // Sort by years of experience (descending)
+              const expA = a.years_of_experience || 0;
+              const expB = b.years_of_experience || 0;
+              return expB - expA;
+            })
+            .slice(0, 3)
+            .map(psychologist => ({
+              id: psychologist.user,
+              name: psychologist.full_name,
+              img: psychologist.profile_picture_url,
+              des: psychologist.biography || 'No biography available',
+              rating: 0, // Rating not available in marketplace API
+              numberOfReviews: 0, // Reviews not available in marketplace API
+              yearsOfExperience: psychologist.years_of_experience,
+              offersOnline: psychologist.offers_online_sessions,
+              offersConsultation: psychologist.offers_initial_consultation,
+              hourlyRate: psychologist.hourly_rate,
+              consultationRate: psychologist.initial_consultation_rate
+            }));
+          
+          setTopPsychologists(sorted);
+        }
+      } catch (error) {
+        console.error('Error fetching top psychologists:', error);
+      }
+    };
+
+    fetchTopPsychologists();
+  }, []);
 
   useEffect(() => {
     const fetchUpcomingAppointment = async () => {

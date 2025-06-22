@@ -1,9 +1,10 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList } from 'react-native';
-import React, { use, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import api from '../../(auth)/api';
+
 const Profile = () => {
   const [userInfo, setUserInfo] = useState(null);
   const profileImage = null; // Replace this with your image URL or null
@@ -13,6 +14,69 @@ const Profile = () => {
     { label: 'Hồ sơ của bé', route: 'childRecord' },
     { label: 'Thông tin đặt lịch', route: 'bookingInfo' },
   ];
+
+  const handleLogout = async () => {
+    console.log('Logout button pressed');
+    
+    // For web, we'll do a direct logout without confirmation for now
+    if (Platform.OS === 'web') {
+      try {
+        console.log('Starting logout process...');
+        // Clear all stored tokens
+        await AsyncStorage.multiRemove([
+          'access_token',
+          'refresh_token',
+          'user_type',
+          'user_id'
+        ]);
+        console.log('Tokens cleared successfully');
+        
+        // Navigate to welcome screen
+        console.log('Navigating to welcome screen...');
+        router.replace('/(auth)/welcome');
+      } catch (error) {
+        console.error('Error during logout:', error);
+        alert('Có lỗi xảy ra khi đăng xuất');
+      }
+    } else {
+      // For mobile, use the confirmation dialog
+      Alert.alert(
+        'Đăng xuất',
+        'Bạn có chắc chắn muốn đăng xuất?',
+        [
+          {
+            text: 'Hủy',
+            style: 'cancel',
+          },
+          {
+            text: 'Đăng xuất',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                console.log('Starting logout process...');
+                // Clear all stored tokens
+                await AsyncStorage.multiRemove([
+                  'access_token',
+                  'refresh_token',
+                  'user_type',
+                  'user_id'
+                ]);
+                console.log('Tokens cleared successfully');
+                
+                // Navigate to welcome screen
+                console.log('Navigating to welcome screen...');
+                router.replace('/(auth)/welcome');
+              } catch (error) {
+                console.error('Error during logout:', error);
+                Alert.alert('Lỗi', 'Có lỗi xảy ra khi đăng xuất');
+              }
+            },
+          },
+        ]
+      );
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       const fetchProfile = async () => {
@@ -92,6 +156,16 @@ const Profile = () => {
         )}
       />
 
+      {/* Logout Button */}
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={handleLogout}
+        activeOpacity={0.6}
+      >
+        <Ionicons name="log-out-outline" size={20} color="#F44336" />
+        <Text style={styles.logoutText}>Đăng xuất</Text>
+      </TouchableOpacity>
+
     </View>
   );
 };
@@ -146,5 +220,18 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 10,
   },
-
+  logoutButton: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#F44336',
+    marginLeft: 10,
+  },
 });

@@ -153,10 +153,10 @@ const Calendar = () => {
             { color: getStatusColor(status), key: appointment.id }
           ];
         } else {
-          marked[date].dots.push({
-            color: getStatusColor(status),
-            key: appointment.id
-          });
+        marked[date].dots.push({
+          color: getStatusColor(status),
+          key: appointment.id
+        });
         }
       }
     });
@@ -255,13 +255,13 @@ const Calendar = () => {
   // Handle appointment actions
   const handleAppointmentAction = async (appointment, action) => {
     // Get the correct appointment ID for API calls
-    const appointmentId = appointment.originalData?.appointment_id || appointment.id;
+      const appointmentId = appointment.originalData?.appointment_id || appointment.id;
 
-    switch (action) {
+      switch (action) {
       case 'view':
         setSelectedAppointment(appointment);
         setShowAppointmentDetails(true);
-        break;
+          break;
       case 'createZoom':
         try {
           const response = await api.post(`/api/appointments/${appointmentId}/create_zoom_link/`);
@@ -273,9 +273,9 @@ const Calendar = () => {
           console.error('Error creating zoom link:', error);
           Alert.alert('Error', 'Failed to create zoom link. Please try again.');
         }
-        break;
+          break;
       case 'cancel':
-        Alert.alert(
+            Alert.alert(
           'Cancel Appointment',
           'Are you sure you want to mark this appointment as cancelled?',
           [
@@ -289,35 +289,35 @@ const Calendar = () => {
         );
         break;
       case 'noShow':
-        Alert.alert(
+            Alert.alert(
           'Mark as No-Show',
           'Are you sure you want to mark this appointment as no-show?',
-          [
+              [
             { text: 'No', style: 'cancel' },
-            {
+                {
               text: 'Yes',
               style: 'destructive',
               onPress: () => updateAppointmentStatus(appointmentId, 'No_Show')
             }
           ]
         );
-        break;
-      case 'openZoom':
-        if (appointment.meetingLink) {
-          openZoomLink(appointment.meetingLink);
-        } else {
+          break;
+        case 'openZoom':
+          if (appointment.meetingLink) {
+            openZoomLink(appointment.meetingLink);
+          } else {
           Alert.alert('No Meeting Link', 'Zoom meeting link is not available yet. Please create it first.');
-        }
+          }
         break;
-      default:
+        default:
         break;
-    }
+      }
   };
 
   // Open zoom link
   const openZoomLink = async (meetingLink) => {
     try {
-      await Linking.openURL(meetingLink);
+        await Linking.openURL(meetingLink);
     } catch (error) {
       console.error('Error opening zoom link:', error);
       Alert.alert('Error', 'Could not open zoom link. Please copy and paste it manually.');
@@ -439,7 +439,7 @@ const Calendar = () => {
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
     const startOfWeek = new Date(firstDayOfMonth);
     startOfWeek.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay() + 1); // Monday
-
+    
     const dates = [];
     const today = new Date();
 
@@ -448,13 +448,13 @@ const Calendar = () => {
       const date = new Date(startOfWeek);
       date.setDate(startOfWeek.getDate() + i);
       const dateString = date.toISOString().split('T')[0];
-
+      
       // Check if this date has appointments
       const dayAppointments = appointments.filter(appointment => {
         const appointmentDate = new Date(appointment.scheduledStartTime).toISOString().split('T')[0];
         return appointmentDate === dateString;
       });
-
+      
       dates.push({
         date: dateString,
         day: date.getDate(),
@@ -466,7 +466,7 @@ const Calendar = () => {
         isCurrentYear: date.getFullYear() === currentYear
       });
     }
-
+    
     return dates;
   };
 
@@ -553,10 +553,10 @@ const Calendar = () => {
   const formatTime = (timeString) => {
     try {
       const time = new Date(timeString);
-      return time.toLocaleTimeString('en-US', {
-        hour: '2-digit',
+      return time.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
         minute: '2-digit',
-        hour12: true
+        hour12: true 
       });
     } catch (error) {
       return timeString;
@@ -569,7 +569,7 @@ const Calendar = () => {
       const response = await api.patch(`/api/appointments/${appointmentId}/update_status/`, {
         appointment_status: newStatus
       });
-
+      
       if (response.status === 200) {
         // Refresh appointments after status update
         await fetchAppointments();
@@ -599,11 +599,11 @@ const Calendar = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Animated.View
+        <Animated.View 
           style={[
             styles.loadingSpinner,
             { transform: [{ rotate: spin }] }
-          ]}
+          ]} 
         />
       </View>
     );
@@ -615,7 +615,7 @@ const Calendar = () => {
       {showWarning && (
         <View style={styles.warningContainer}>
           <Text style={styles.warningText}>⚠️ {warningMessage}</Text>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.warningCloseButton}
             onPress={() => {
               setShowWarning(false);
@@ -638,7 +638,7 @@ const Calendar = () => {
           </Text>
           <TouchableOpacity style={styles.todayButton} onPress={goToCurrentWeek}>
             <Text style={styles.todayButtonText}>Today</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
         </View>
       </View>
 
@@ -724,7 +724,7 @@ const Calendar = () => {
 
       {/* Day Schedule View */}
       {selectedDate && (
-        <View style={styles.scheduleContainer}>
+      <View style={styles.scheduleContainer}>
           <View style={styles.scheduleHeader}>
             <Text style={styles.scheduleDateTitle}>
               Schedule for {new Date(selectedDate).toLocaleDateString('en-US', {
@@ -734,7 +734,7 @@ const Calendar = () => {
                 day: 'numeric'
               })}
             </Text>
-          </View>
+              </View>
           <ScrollView
             style={styles.scheduleScroll}
             showsVerticalScrollIndicator={false}
@@ -758,27 +758,27 @@ const Calendar = () => {
                   style={styles.appointmentCard}
                   onPress={() => handleAppointmentAction(appointment, 'view')}
                 >
-                  <View style={[
+                    <View style={[
                     styles.appointmentAccent,
-                    { backgroundColor: getEventColor(appointment.sessionType) }
-                  ]} />
+                      { backgroundColor: getEventColor(appointment.sessionType) }
+                    ]} />
                   <View style={styles.appointmentContent}>
                     <Text style={styles.appointmentTitle}>
-                      {appointment.childName} - {appointment.sessionType}
-                    </Text>
+                        {appointment.childName} - {appointment.sessionType}
+                      </Text>
                     <Text style={styles.appointmentTime}>
-                      {formatTime(appointment.scheduledStartTime)} - {formatTime(appointment.scheduledEndTime)}
-                    </Text>
+                        {formatTime(appointment.scheduledStartTime)} - {formatTime(appointment.scheduledEndTime)}
+                      </Text>
                     <Text style={styles.appointmentParent}>
                       Parent: {appointment.parentName}
                     </Text>
                     <View style={styles.appointmentStatus}>
-                      <Text style={[
-                        styles.statusText,
-                        { color: getStatusColor(appointment.status) }
-                      ]}>
-                        {appointment.status}
-                      </Text>
+                        <Text style={[
+                          styles.statusText,
+                          { color: getStatusColor(appointment.status) }
+                        ]}>
+                          {appointment.status}
+                        </Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -786,7 +786,7 @@ const Calendar = () => {
             ) : error ? (
               <View style={styles.emptySchedule}>
                 <Text style={styles.emptyScheduleText}>Error: {error}</Text>
-                <TouchableOpacity
+                          <TouchableOpacity
                   style={styles.retryButton}
                   onPress={fetchAppointments}
                 >
@@ -825,14 +825,14 @@ const Calendar = () => {
               </View>
               <TouchableOpacity
                 style={styles.closeModalButton}
-                onPress={() => {
+                            onPress={() => {
                   setShowAppointmentDetails(false);
                   setSelectedAppointment(null);
-                }}
-              >
+                            }}
+                          >
                 <Text style={styles.closeModalText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+                          </TouchableOpacity>
+                      </View>
 
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               {/* Patient Information */}
@@ -842,7 +842,7 @@ const Calendar = () => {
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Child Name</Text>
                     <Text style={styles.infoValue}>{selectedAppointment.childName}</Text>
-                  </View>
+                    </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Age</Text>
                     <Text style={styles.infoValue}>{selectedAppointment.childAge} years old</Text>
@@ -850,9 +850,9 @@ const Calendar = () => {
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Parent/Guardian</Text>
                     <Text style={styles.infoValue}>{selectedAppointment.parentName}</Text>
-                  </View>
-                </View>
               </View>
+            </View>
+      </View>
 
               {/* Session Details */}
               <View style={styles.infoSection}>
@@ -867,20 +867,20 @@ const Calendar = () => {
                         month: 'long', 
                         day: 'numeric' 
                       })}
-                    </Text>
+          </Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Time</Text>
                     <Text style={styles.infoValue}>
                       {formatTime(selectedAppointment.scheduledStartTime)} - {formatTime(selectedAppointment.scheduledEndTime)}
-                    </Text>
+                  </Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Session Type</Text>
                     <Text style={styles.infoValue}>{selectedAppointment.sessionType}</Text>
                   </View>
                 </View>
-              </View>
+                </View>
 
               {/* Notes Section */}
               {selectedAppointment.notes && (
@@ -892,7 +892,7 @@ const Calendar = () => {
                 </View>
               )}
 
-              {/* Meeting Link Section */}
+                {/* Meeting Link Section */}
               {selectedAppointment.meetingLink && (
                 <View style={styles.infoSection}>
                   <Text style={styles.sectionTitle}>Meeting Link</Text>
@@ -901,8 +901,8 @@ const Calendar = () => {
                       {selectedAppointment.meetingLink}
                     </Text>
                   </View>
-                </View>
-              )}
+                  </View>
+                )}
             </ScrollView>
 
             {/* Professional Action Buttons */}
@@ -918,39 +918,39 @@ const Calendar = () => {
                 )}
 
                 {selectedAppointment.meetingLink && (
-                  <TouchableOpacity
+                    <TouchableOpacity
                     style={[styles.actionButton, styles.primaryButton]}
                     onPress={() => handleAppointmentAction(selectedAppointment, 'openZoom')}
-                  >
+                    >
                     <Text style={styles.actionButtonText}>Join Meeting</Text>
-                  </TouchableOpacity>
-                )}
+                    </TouchableOpacity>
+                  )}
 
                 {selectedAppointment.meetingLink && (
-                  <TouchableOpacity
+                    <TouchableOpacity
                     style={[styles.actionButton, styles.secondaryButton]}
                     onPress={() => copyToClipboard(selectedAppointment.meetingLink)}
-                  >
+                    >
                     <Text style={styles.secondaryButtonText}>Copy Link</Text>
-                  </TouchableOpacity>
-                )}
+                    </TouchableOpacity>
+                  )}
               </View>
 
               <View style={styles.actionButtonsRow}>
-                <TouchableOpacity
+                    <TouchableOpacity
                   style={[styles.actionButton, styles.warningButton]}
                   onPress={() => handleAppointmentAction(selectedAppointment, 'cancel')}
-                >
+                    >
                   <Text style={styles.actionButtonText}>Cancel Appointment</Text>
-                </TouchableOpacity>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
+              <TouchableOpacity 
                   style={[styles.actionButton, styles.dangerButton]}
                   onPress={() => handleAppointmentAction(selectedAppointment, 'noShow')}
-                >
+              >
                   <Text style={styles.actionButtonText}>Mark as No-Show</Text>
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
+            </View>
             </View>
           </View>
         </View>
@@ -1183,11 +1183,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
   },
   appointmentHeader: {
     flexDirection: 'row',

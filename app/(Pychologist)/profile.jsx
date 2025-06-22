@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, Animated, Dimensions, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, Image, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import api, { checkPsychologistProfile } from '../(auth)/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -40,6 +40,10 @@ const Profile = () => {
   const [animatedValue] = useState(new Animated.Value(1));
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInputValue, setUrlInputValue] = useState('');
 
   // Animated spinner
   const spinValue = new Animated.Value(0);
@@ -107,6 +111,7 @@ const Profile = () => {
         console.log('Profile found:', profileData);
         console.log('Profile keys:', Object.keys(profileData));
         setProfile(profileData);
+        setProfilePhoto(profileData.profile_picture_url);
         // Pre-fill form with existing data
         setFormData({
           first_name: profileData.first_name || '',
@@ -235,6 +240,89 @@ const Profile = () => {
     }).start();
   };
 
+  // Photo upload functions - URL only approach
+  const showUrlInputDialog = () => {
+    if (Platform.OS === 'web') {
+      // On web, show our custom input
+      setUrlInputValue(profilePhoto || profile.profile_picture_url || '');
+      setShowUrlInput(true);
+    } else {
+      // On mobile, use Alert.prompt if available
+      if (Alert.prompt) {
+        Alert.prompt(
+          'Update Profile Photo',
+          'Please enter the URL of your profile photo:',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Save', 
+              onPress: (url) => {
+                if (url && url.trim()) {
+                  updateProfilePhotoUrl(url.trim());
+                } else if (url) {
+                  Alert.alert('Invalid URL', 'Please enter a valid photo URL.');
+                }
+              }
+            }
+          ],
+          'plain-text',
+          profilePhoto || profile.profile_picture_url || ''
+        );
+      } else {
+        // Fallback for mobile if Alert.prompt is not available
+        setUrlInputValue(profilePhoto || profile.profile_picture_url || '');
+        setShowUrlInput(true);
+      }
+    }
+  };
+
+  const handleUrlSubmit = () => {
+    if (urlInputValue && urlInputValue.trim()) {
+      updateProfilePhotoUrl(urlInputValue.trim());
+      setShowUrlInput(false);
+      setUrlInputValue('');
+    } else {
+      Alert.alert('Invalid URL', 'Please enter a valid photo URL.');
+    }
+  };
+
+  const updateProfilePhotoUrl = async (photoUrl) => {
+    try {
+      setUploadingPhoto(true);
+      
+      // Validate URL format
+      if (!photoUrl.startsWith('http://') && !photoUrl.startsWith('https://')) {
+        Alert.alert('Invalid URL', 'Please enter a valid URL starting with http:// or https://');
+        return;
+      }
+      
+      console.log('Updating profile photo URL:', photoUrl);
+      
+      const response = await api.patch('/api/psychologists/profile/update_profile/', {
+        profile_picture_url: photoUrl
+      });
+
+      console.log('Profile photo URL updated successfully:', response.data);
+      
+      // Update local state
+      setProfilePhoto(photoUrl);
+      
+      if (profile) {
+        setProfile(prev => ({
+          ...prev,
+          profile_picture_url: photoUrl
+        }));
+      }
+
+      Alert.alert('Success', 'Profile photo URL updated successfully!');
+    } catch (error) {
+      console.error('Error updating photo URL:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to update photo URL. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -319,15 +407,66 @@ const Profile = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <View style={styles.profileAvatar}>
-              <Text style={styles.avatarText}>
-                {profile.first_name?.[0] || 'P'}{profile.last_name?.[0] || 'S'}
-          </Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.profileAvatarContainer} 
+              onPress={showUrlInputDialog}
+              disabled={uploadingPhoto}
+              activeOpacity={0.7}
+            >
+              {(profilePhoto || profile.profile_picture_url) ? (
+                <Image 
+                  source={{ 
+                    uri: (() => {
+                      // Check if profilePhoto is valid
+                      if (typeof profilePhoto === 'string' && profilePhoto !== '[object Object]' && profilePhoto.startsWith('http')) {
+                        return profilePhoto;
+                      }
+                      // Check if profile.profile_picture_url is valid
+                      if (typeof profile.profile_picture_url === 'string' && 
+                          profile.profile_picture_url !== '[object Object]' && 
+                          profile.profile_picture_url.startsWith('http')) {
+                        return profile.profile_picture_url;
+                      }
+                      // Check if it's an object with URL properties
+                      if (typeof profile.profile_picture_url === 'object' && profile.profile_picture_url !== null) {
+                        return profile.profile_picture_url.url || profile.profile_picture_url.uri || profile.profile_picture_url.src;
+                      }
+                      return null;
+                    })()
+                  }} 
+                  style={styles.profileAvatarImage} 
+                />
+              ) : (
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.avatarText}>
+                    {profile.first_name?.[0] || 'P'}{profile.last_name?.[0] || 'S'}
+                  </Text>
+                </View>
+              )}
+              {console.log('profilePhoto state:', profilePhoto)}
+              {console.log('profile.profile_picture_url:', profile.profile_picture_url)}
+              {console.log('profile.profile_picture_url type:', typeof profile.profile_picture_url)}
+              {console.log('Final image URI:', typeof profilePhoto === 'string' ? profilePhoto : 
+                           typeof profile.profile_picture_url === 'string' ? profile.profile_picture_url :
+                           profile.profile_picture_url?.url || profile.profile_picture_url?.uri || profile.profile_picture_url?.src)}
+              {uploadingPhoto && (
+                <View style={styles.uploadOverlay}>
+                  <Animated.View
+                    style={[
+                      styles.uploadSpinner,
+                      { transform: [{ rotate: spin }] }
+                    ]}
+                  />
+                </View>
+              )}
+              <View style={styles.photoUploadIndicator}>
+                <Ionicons name="link" size={16} color="#fff" />
+              </View>
+            </TouchableOpacity>
             <View style={styles.headerInfo}>
               <Text style={styles.profileName}>
                 {profile.first_name} {profile.last_name}
-          </Text>
+              </Text>
               <Text style={styles.profileTitle}>Licensed Psychologist</Text>
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={16} color="#ffd700" />
@@ -574,6 +713,50 @@ const Profile = () => {
           </View>
         )}
       </ScrollView>
+      
+      {/* URL Input Modal */}
+      {showUrlInput && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.urlInputModal}>
+            <Text style={styles.modalTitle}>Update Profile Photo</Text>
+            <Text style={styles.modalSubtitle}>Please enter the URL of your profile photo:</Text>
+            
+            <TextInput
+              style={styles.urlInput}
+              value={urlInputValue}
+              onChangeText={setUrlInputValue}
+              placeholder="https://example.com/photo.jpg"
+              placeholderTextColor="#999"
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              keyboardType="url"
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelModalButton]} 
+                onPress={() => {
+                  setShowUrlInput(false);
+                  setUrlInputValue('');
+                }}
+              >
+                <Text style={styles.cancelModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveModalButton]} 
+                onPress={handleUrlSubmit}
+                disabled={uploadingPhoto}
+              >
+                <Text style={styles.saveModalButtonText}>
+                  {uploadingPhoto ? 'Saving...' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -726,6 +909,23 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  profileAvatarContainer: {
+    position: 'relative',
+    marginRight: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: 'rgba(108, 99, 255, 0.2)',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 40,
   },
   profileAvatar: {
     width: 80,
@@ -981,5 +1181,103 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginRight: 4,
+  },
+  uploadOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: '#fff',
+    borderBottomColor: 'transparent',
+  },
+  photoUploadIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#6c63ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  urlInputModal: {
+    backgroundColor: '#fff',
+    padding: 24,
+    borderRadius: 16,
+    width: '80%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 16,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#718096',
+    marginBottom: 24,
+  },
+  urlInput: {
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#2d3748',
+    backgroundColor: '#fff',
+    minHeight: 50,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 32,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelModalButton: {
+    backgroundColor: '#e2e8f0',
+  },
+  cancelModalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4a5568',
+  },
+  saveModalButton: {
+    backgroundColor: '#6c63ff',
+  },
+  saveModalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 8,
   },
 });
