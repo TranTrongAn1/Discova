@@ -1,34 +1,37 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router'; // If you want to redirect user
+import { router } from 'expo-router';
 
 const api = axios.create({
   baseURL: 'https://kmdiscova.id.vn/',
 });
 
-// Add request interceptor
+let hasRedirectedToWelcome = false; // to avoid repeated redirects
+
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('access_token');
 
-    if (!token) {
-      console.warn('⚠️ No access token found');
+    if (token) {
+      config.headers.Authorization = `Token ${token}`;
 
-      // ✅ OPTION 1: Redirect to login screen
-      // Only if you are not already there, to avoid infinite loops
-      if (!router?.canGoBack?.()) {
-        router.replace('/login');
+      // Redirect to welcome only once
+      if (!hasRedirectedToWelcome && router?.replace) {
+        hasRedirectedToWelcome = true;
+        setTimeout(() => {
+          router.replace('/welcome');
+        }, 0); // Delay to avoid interfering with request
       }
 
-      // ✅ OPTION 2: Prevent request from continuing (optional)
-      // return Promise.reject(new Error('No access token'));
+    } else {
+      console.warn('⚠️ No access token found');
 
-      // ✅ OPTION 3: Still send the request without token (fallback)
-      return config;
+      // Optional: redirect to login if no token
+      // if (!router.canGoBack?.()) {
+      //   router.replace('/login');
+      // }
     }
 
-    // ✅ If token exists, attach it
-    config.headers.Authorization = `Token ${token}`;
     return config;
   },
   (error) => {
