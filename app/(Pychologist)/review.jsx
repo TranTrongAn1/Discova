@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Animated, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 const Review = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [spin, setSpin] = useState(0);
 
   const fetchReviews = async () => {
     setLoading(true);
@@ -106,7 +107,14 @@ const Review = () => {
 
       {/* List of Reviews */}
       {loading ? (
-        <Text style={styles.loadingText}>Đang tải đánh giá...</Text>
+        <View style={styles.loadingContainer}>
+          <Animated.View 
+            style={[
+              styles.loadingSpinner,
+              { transform: [{ rotate: spin }] }
+            ]} 
+          />
+        </View>
       ) : (
         <FlatList
           data={reviews}
@@ -231,10 +239,17 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
   },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 40,
-    color: '#666',
-    fontSize: 16,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: '#f5b50a',
+    borderBottomColor: 'transparent',
   },
 });

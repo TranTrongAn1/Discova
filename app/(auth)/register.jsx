@@ -7,18 +7,18 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View
+    Animated,
+    Dimensions,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 
@@ -167,7 +167,7 @@ const Register = ({ onSwitch }) => {
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateX: slideAnim }] }}>
             <Toast />
-            <TouchableOpacity style={styles.backButton} onPress={router.back}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(auth)/welcome')}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </TouchableOpacity>
 
@@ -194,6 +194,9 @@ const Register = ({ onSwitch }) => {
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
             />
 
             <View style={styles.pwdWrapper}>
@@ -204,6 +207,9 @@ const Register = ({ onSwitch }) => {
                 secureTextEntry={!showPwd}
                 value={password}
                 onChangeText={setPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
               />
               <TouchableOpacity onPress={() => setShowPwd(!showPwd)} style={styles.eyeBtn}>
                 <Ionicons name={showPwd ? 'eye-off' : 'eye'} size={22} color="#A1A4B2" />
@@ -218,6 +224,9 @@ const Register = ({ onSwitch }) => {
                 secureTextEntry={!showPwd1}
                 value={passwordConfirm}
                 onChangeText={setPasswordConfirm}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
               />
               <TouchableOpacity onPress={() => setShowPwd1(!showPwd1)} style={styles.eyeBtn}>
                 <Ionicons name={showPwd1 ? 'eye-off' : 'eye'} size={22} color="#A1A4B2" />
@@ -311,3 +320,178 @@ const Register = ({ onSwitch }) => {
 };
 
 export default Register;
+
+const styles = StyleSheet.create({
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  Welcome: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 100,
+    marginBottom: 30,
+    color: '#333',
+  },
+  socialContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1877F2',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  socialText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  Text: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E1E5E9',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    outlineStyle: 'none',
+    ...Platform.select({
+      web: {
+        cursor: 'text',
+        userSelect: 'text',
+        WebkitUserSelect: 'text',
+        MozUserSelect: 'text',
+      },
+    }),
+  },
+  pwdWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E1E5E9',
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    backgroundColor: '#fff',
+    outlineStyle: 'none',
+  },
+  input2: {
+    flex: 1,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    fontSize: 16,
+    outlineStyle: 'none',
+    ...Platform.select({
+      web: {
+        cursor: 'text',
+        userSelect: 'text',
+        WebkitUserSelect: 'text',
+        MozUserSelect: 'text',
+      },
+    }),
+  },
+  eyeBtn: {
+    padding: 15,
+  },
+  Text12: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    color: '#333',
+  },
+  userTypeContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  userTypeButton: {
+    flex: 1,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#E1E5E9',
+    borderRadius: 10,
+    marginHorizontal: 5,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  userTypeButtonActive: {
+    backgroundColor: '#6c63ff',
+    borderColor: '#6c63ff',
+  },
+  userTypeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  userTypeTextActive: {
+    color: '#fff',
+  },
+  policyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 30,
+  },
+  Text3: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  terms: {
+    color: '#6c63ff',
+    fontWeight: '600',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#6c63ff',
+    borderRadius: 4,
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxTick: {
+    width: 10,
+    height: 10,
+    backgroundColor: '#6c63ff',
+    borderRadius: 2,
+  },
+  Button: {
+    backgroundColor: '#6c63ff',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
