@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import api from '../(auth)/api';
+import api, { checkPsychologistProfile } from '../(auth)/api';
 
 const Layout = () => {
   const router = useRouter();
@@ -13,6 +13,7 @@ const Layout = () => {
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [paymentChecked, setPaymentChecked] = useState(false);
 
   const navItems = [
     { name: 'calendar', label: 'Calendar', icon: 'calendar-outline' },
@@ -21,6 +22,65 @@ const Layout = () => {
     { name: 'client', label: 'Client', icon: 'people-outline' },
     { name: 'profile', label: 'Profile', icon: 'person-outline' },
   ];
+
+  // Check payment status when layout loads
+  useEffect(() => {
+    const checkPaymentStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) return;
+
+        // Check psychologist profile and verification status
+        const profileData = await checkPsychologistProfile();
+        
+        if (profileData) {
+          // If verification status is "Pending", redirect to payment
+          if (profileData.verification_status === 'Pending') {
+            Alert.alert(
+              'Payment Required',
+              'You need to complete the registration payment before accessing the platform.',
+              [
+                { 
+                  text: 'Pay Now', 
+                  onPress: () => router.replace('/(auth)/psychologistPayment') 
+                },
+                { text: 'Cancel', style: 'cancel', onPress: () => router.replace('/(auth)/welcome') }
+              ]
+            );
+            return;
+          }
+          
+          // If verification status is "Rejected", show error
+          if (profileData.verification_status === 'Rejected') {
+            Alert.alert(
+              'Verification Rejected',
+              'Your verification has been rejected. Please contact support.',
+              [{ text: 'OK', onPress: () => router.replace('/(auth)/welcome') }]
+            );
+            return;
+          }
+        }
+        
+        setPaymentChecked(true);
+      } catch (error) {
+        // If profile doesn't exist (404), that's fine - user needs to pay first
+        console.log('No profile found - user needs to pay first');
+        Alert.alert(
+          'Payment Required',
+          'You need to complete the registration payment before accessing the platform.',
+          [
+            { 
+              text: 'Pay Now', 
+              onPress: () => router.replace('/(auth)/psychologistPayment') 
+            },
+            { text: 'Cancel', style: 'cancel', onPress: () => router.replace('/(auth)/welcome') }
+          ]
+        );
+      }
+    };
+
+    checkPaymentStatus();
+  }, []);
 
   // Fetch psychologist profile for avatar
   useEffect(() => {
@@ -38,9 +98,11 @@ const Layout = () => {
       }
     };
 
-    fetchProfile();
-    fetchNotifications();
-  }, []);
+    if (paymentChecked) {
+      fetchProfile();
+      fetchNotifications();
+    }
+  }, [paymentChecked]);
 
   const handleLogout = async () => {
     try {
@@ -179,6 +241,16 @@ const Layout = () => {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Show loading while checking payment status
+  if (!paymentChecked) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="refresh" size={32} color="#6c63ff" />
+        <Text style={styles.loadingText}>Checking account status...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

@@ -28,7 +28,7 @@
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.9",
     "@stripe/stripe-js": "^7.3.1",
-    "@stripe/stripe-react-native": "0.45.0",
+    "@stripe/stripe-react-native": "^0.45.0",
     "axios": "^1.9.0",
     "discova": "file:",
     "expo": "~53.0.9",

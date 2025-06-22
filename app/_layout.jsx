@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router';
 import React from 'react';
 import { LogBox, StyleSheet } from 'react-native';
-// import { StripeProvider } from '@stripe/stripe-react-native';
 import 'react-native-gesture-handler';
 
 LogBox.ignoreLogs([
@@ -17,6 +16,8 @@ const RootLayout = () => {
         <Stack.Screen name="(Pychologist)" options={{ headerShown: false }} />
         <Stack.Screen name="(booking)" options={{ headerShown: false }} />
         <Stack.Screen name="(Pychologist)/calendar" options={{ headerShown: false }} />
+        <Stack.Screen name="psychologistPayment" options={{ headerShown: false }} />
+        <Stack.Screen name="payment-success" options={{ headerShown: false }} />
     </Stack>
   )
 }

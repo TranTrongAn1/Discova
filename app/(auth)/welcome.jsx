@@ -8,9 +8,9 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
-import { clearTokens } from './api';
+import { checkPsychologistProfile, clearTokens } from './api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -78,8 +78,39 @@ const Welcome = () => {
         console.log('Parent user, redirecting to home');
         router.replace('/(parent)/home');
       } else if (userType === 'Psychologist') {
-        console.log('Psychologist user, redirecting to profile');
-        router.replace('/(Pychologist)/profile');
+        console.log('Psychologist user, checking payment status...');
+        
+        // Check psychologist profile and payment status
+        try {
+          const profileData = await checkPsychologistProfile();
+          
+          if (profileData) {
+            // If verification status is "Pending", redirect to payment
+            if (profileData.verification_status === 'Pending') {
+              console.log('Payment required, redirecting to payment screen');
+              router.replace('/(auth)/psychologistPayment');
+              return;
+            }
+            
+            // If verification status is "Rejected", show error
+            if (profileData.verification_status === 'Rejected') {
+              Alert.alert(
+                'Verification Rejected',
+                'Your verification has been rejected. Please contact support.',
+                [{ text: 'OK', onPress: () => router.replace('/login') }]
+              );
+              return;
+            }
+          }
+          
+          // If no profile or verification is approved, proceed to profile
+          console.log('Payment verified or no profile, redirecting to profile');
+          router.replace('/(Pychologist)/profile');
+        } catch (profileError) {
+          // If profile doesn't exist (404), redirect to payment
+          console.log('No profile found, redirecting to payment');
+          router.replace('/(auth)/psychologistPayment');
+        }
       } else {
         console.warn('Unknown user type:', userType);
         Alert.alert('Error', 'Unknown account type. Please login again.');
@@ -97,6 +128,29 @@ const Welcome = () => {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity 
+        style={styles.logoutButton}
+        onPress={() => {
+          Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Logout', 
+                style: 'destructive',
+                onPress: async () => {
+                  await clearTokens();
+                  router.replace('/login');
+                }
+              }
+            ]
+          );
+        }}
+      >
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+
       <Animated.View style={[styles.textWrapper, {
         opacity: fadeAnim,
         transform: [{ translateY }]
@@ -165,5 +219,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    padding: 10,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

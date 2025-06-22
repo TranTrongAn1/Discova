@@ -1,11 +1,13 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
     Animated,
+    Image,
     Platform,
     Pressable,
     ScrollView,
@@ -13,6 +15,7 @@ import {
     Switch,
     Text,
     TextInput,
+    TouchableOpacity,
     View
 } from 'react-native';
 import api from '../(auth)/api';
@@ -92,6 +95,45 @@ const EditProfile = () => {
     });
   };
 
+  const pickImageAndUpload = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your media library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 4],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const image = result.assets[0];
+      const formData = new FormData();
+      formData.append('file', {
+        uri: image.uri,
+        name: 'profile.jpg',
+        type: 'image/jpeg',
+      });
+      formData.append('upload_preset', 'converts');
+
+      try {
+        const res = await fetch('https://api.cloudinary.com/v1_1/du7snch3r/image/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        setForm({ ...form, profile_picture_url: data.secure_url });
+        Alert.alert('✅ Success', 'Profile image uploaded successfully');
+      } catch (err) {
+        console.error('Upload failed:', err);
+        Alert.alert('❌ Error', 'Failed to upload image');
+      }
+    }
+  };
 
  const handleUpdate = async () => {
   if (
@@ -119,7 +161,6 @@ const EditProfile = () => {
   };
 
   if (
-    (form.profile_picture_url && !isValidUrl(form.profile_picture_url)) ||
     (form.website_url && !isValidUrl(form.website_url)) ||
     (form.linkedin_url && !isValidUrl(form.linkedin_url))
   ) {
@@ -262,11 +303,28 @@ const EditProfile = () => {
             value={form.last_name.trim()}
             onChangeText={(text) => handleChange('last_name', text)}
           />
-          <AnimatedTextInput
-            placeholder="Profile Picture URL"
-            value={form.profile_picture_url.trim()}
-            onChangeText={(text) => handleChange('profile_picture_url', text)}
-          />
+          
+          {/* Profile Image Upload Section */}
+          <Text style={styles.label}>Profile Picture</Text>
+          
+          <TouchableOpacity onPress={pickImageAndUpload} style={styles.uploadButton}>
+            <Text style={styles.uploadButtonText}>📷 Choose Image</Text>
+          </TouchableOpacity>
+
+          {form.profile_picture_url ? (
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <Image
+                source={{ uri: form.profile_picture_url }}
+                style={{ 
+                  width: 100, 
+                  height: 100, 
+                  borderRadius: 50, 
+                  marginVertical: 10
+                }}
+              />
+            </View>
+          ) : null}
+          
           <AnimatedTextInput
             placeholder="Biography"
             style={[styles.input, styles.textArea]}
@@ -489,47 +547,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#6c63ff',
-    ...Platform.select({
-
-      ios: {
-
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6
-
-      },
-
-      android: {
-
-        elevation: 6,
-
-      },
-
-      web: {
-
-        boxShadow: '0 4 6px rgba(0,0,0,0000.2)',
-
-      },
-
-    }),
-    elevation: 6,
-    marginBottom: 16,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6c63ff',
-  },
   title: {
     fontSize: 34,
     fontWeight: '800',
@@ -685,5 +702,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
+  },
+  uploadButton: {
+    backgroundColor: '#6c63ff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 2 4px rgba(0,0,0,0.1)',
+      },
+    }),
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Animated, Dimensions, Image, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import api, { checkPsychologistProfile } from '../(auth)/api';
@@ -34,6 +36,7 @@ const FormField = React.memo(({ label, value, onChangeText, placeholder, multili
 
 const Profile = () => {
   const navigation = useNavigation();
+  const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,8 +45,6 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [urlInputValue, setUrlInputValue] = useState('');
 
   // Animated spinner
   const spinValue = new Animated.Value(0);
@@ -110,6 +111,35 @@ const Profile = () => {
       if (profileData) {
         console.log('Profile found:', profileData);
         console.log('Profile keys:', Object.keys(profileData));
+        
+        // Check verification status
+        if (profileData.verification_status === 'Pending') {
+          // User needs to pay first
+          Alert.alert(
+            'Payment Required',
+            'You need to complete the registration payment before creating your profile.',
+            [
+              { 
+                text: 'Pay Now', 
+                onPress: () => router.replace('/(auth)/psychologistPayment') 
+              },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+          setLoading(false);
+          return;
+        }
+        
+        if (profileData.verification_status === 'Rejected') {
+          Alert.alert(
+            'Verification Rejected',
+            'Your verification has been rejected. Please contact support.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+          setLoading(false);
+          return;
+        }
+        
         setProfile(profileData);
         setProfilePhoto(profileData.profile_picture_url);
         // Pre-fill form with existing data
@@ -240,49 +270,48 @@ const Profile = () => {
     }).start();
   };
 
-  // Photo upload functions - URL only approach
-  const showUrlInputDialog = () => {
-    if (Platform.OS === 'web') {
-      // On web, show our custom input
-      setUrlInputValue(profilePhoto || profile.profile_picture_url || '');
-      setShowUrlInput(true);
-    } else {
-      // On mobile, use Alert.prompt if available
-      if (Alert.prompt) {
-        Alert.prompt(
-          'Update Profile Photo',
-          'Please enter the URL of your profile photo:',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Save', 
-              onPress: (url) => {
-                if (url && url.trim()) {
-                  updateProfilePhotoUrl(url.trim());
-                } else if (url) {
-                  Alert.alert('Invalid URL', 'Please enter a valid photo URL.');
-                }
-              }
-            }
-          ],
-          'plain-text',
-          profilePhoto || profile.profile_picture_url || ''
-        );
-      } else {
-        // Fallback for mobile if Alert.prompt is not available
-        setUrlInputValue(profilePhoto || profile.profile_picture_url || '');
-        setShowUrlInput(true);
-      }
+  // Photo upload functions - File upload approach
+  const pickImageAndUpload = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your media library');
+      return;
     }
-  };
 
-  const handleUrlSubmit = () => {
-    if (urlInputValue && urlInputValue.trim()) {
-      updateProfilePhotoUrl(urlInputValue.trim());
-      setShowUrlInput(false);
-      setUrlInputValue('');
-    } else {
-      Alert.alert('Invalid URL', 'Please enter a valid photo URL.');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 4],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const image = result.assets[0];
+      const formData = new FormData();
+      formData.append('file', {
+        uri: image.uri,
+        name: 'profile.jpg',
+        type: 'image/jpeg',
+      });
+      formData.append('upload_preset', 'converts');
+
+      try {
+        setUploadingPhoto(true);
+        const res = await fetch('https://api.cloudinary.com/v1_1/du7snch3r/image/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        
+        // Update profile with the new image URL
+        await updateProfilePhotoUrl(data.secure_url);
+      } catch (err) {
+        console.error('Upload failed:', err);
+        Alert.alert('❌ Error', 'Failed to upload image');
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
   };
 
@@ -409,7 +438,7 @@ const Profile = () => {
           <View style={styles.headerContent}>
             <TouchableOpacity 
               style={styles.profileAvatarContainer} 
-              onPress={showUrlInputDialog}
+              onPress={pickImageAndUpload}
               disabled={uploadingPhoto}
               activeOpacity={0.7}
             >
@@ -713,50 +742,6 @@ const Profile = () => {
           </View>
         )}
       </ScrollView>
-      
-      {/* URL Input Modal */}
-      {showUrlInput && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.urlInputModal}>
-            <Text style={styles.modalTitle}>Update Profile Photo</Text>
-            <Text style={styles.modalSubtitle}>Please enter the URL of your profile photo:</Text>
-            
-            <TextInput
-              style={styles.urlInput}
-              value={urlInputValue}
-              onChangeText={setUrlInputValue}
-              placeholder="https://example.com/photo.jpg"
-              placeholderTextColor="#999"
-              autoCapitalize="none"
-              autoCorrect={false}
-              spellCheck={false}
-              keyboardType="url"
-            />
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelModalButton]} 
-                onPress={() => {
-                  setShowUrlInput(false);
-                  setUrlInputValue('');
-                }}
-              >
-                <Text style={styles.cancelModalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveModalButton]} 
-                onPress={handleUrlSubmit}
-                disabled={uploadingPhoto}
-              >
-                <Text style={styles.saveModalButtonText}>
-                  {uploadingPhoto ? 'Saving...' : 'Save'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   );
 };
@@ -1211,73 +1196,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#6c63ff',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  urlInputModal: {
-    backgroundColor: '#fff',
-    padding: 24,
-    borderRadius: 16,
-    width: '80%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 16,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    color: '#718096',
-    marginBottom: 24,
-  },
-  urlInput: {
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#2d3748',
-    backgroundColor: '#fff',
-    minHeight: 50,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 32,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelModalButton: {
-    backgroundColor: '#e2e8f0',
-  },
-  cancelModalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4a5568',
-  },
-  saveModalButton: {
-    backgroundColor: '#6c63ff',
-  },
-  saveModalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginLeft: 8,
   },
 });

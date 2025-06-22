@@ -263,13 +263,16 @@ const Calendar = () => {
           break;
       case 'createZoom':
         try {
-          const response = await api.post(`/api/appointments/${appointmentId}/create_zoom_link/`);
+          console.log('Creating zoom link for appointment:', appointmentId);
+          const response = await api.post(`/api/appointments/${appointmentId}/start_online_session/`);
+          console.log('Zoom link response:', response);
           if (response.status === 200) {
-            Alert.alert('Success', 'Zoom link created successfully!');
+            Alert.alert('Success', 'Online session started and zoom link created successfully!');
             await fetchAppointments(); // Refresh to get the new link
           }
         } catch (error) {
           console.error('Error creating zoom link:', error);
+          console.error('Error details:', error.response?.data);
           Alert.alert('Error', 'Failed to create zoom link. Please try again.');
         }
           break;
@@ -282,7 +285,33 @@ const Calendar = () => {
             {
               text: 'Yes',
               style: 'destructive',
-              onPress: () => updateAppointmentStatus(appointmentId, 'Cancelled')
+              onPress: () => {
+                // For Android, we'll use a default reason since Alert.prompt is not available
+                if (Platform.OS === 'android') {
+                  updateAppointmentStatus(appointmentId, 'Cancelled', 'Cancelled by psychologist');
+                } else {
+                  // For iOS, we can use Alert.prompt
+                  Alert.prompt(
+                    'Cancellation Reason',
+                    'Please provide a reason for cancellation:',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Submit',
+                        onPress: (reason) => {
+                          if (reason && reason.trim()) {
+                            updateAppointmentStatus(appointmentId, 'Cancelled', reason.trim());
+                          } else {
+                            Alert.alert('Error', 'Cancellation reason is required.');
+                          }
+                        }
+                      }
+                    ],
+                    'plain-text',
+                    ''
+                  );
+                }
+              }
             }
           ]
         );
@@ -562,11 +591,34 @@ const Calendar = () => {
   };
 
   // Handle appointment status update
-  const updateAppointmentStatus = async (appointmentId, newStatus) => {
+  const updateAppointmentStatus = async (appointmentId, newStatus, cancellationReason = null) => {
     try {
-      const response = await api.patch(`/api/appointments/${appointmentId}/update_status/`, {
-        appointment_status: newStatus
-      });
+      console.log('Updating appointment status:', { appointmentId, newStatus, cancellationReason });
+      
+      let endpoint;
+      let requestBody = {};
+      
+      // Use the correct endpoint based on the status
+      switch (newStatus) {
+        case 'Completed':
+          endpoint = `/api/appointments/${appointmentId}/complete/`;
+          break;
+        case 'No_Show':
+          endpoint = `/api/appointments/${appointmentId}/mark_no_show/`;
+          break;
+        case 'Cancelled':
+          endpoint = `/api/appointments/${appointmentId}/cancel/`;
+          requestBody = {
+            cancellation_reason: cancellationReason || 'Cancelled by psychologist'
+          };
+          break;
+        default:
+          throw new Error(`Unsupported status: ${newStatus}`);
+      }
+      
+      console.log('Making request to:', endpoint, 'with body:', requestBody);
+      const response = await api.post(endpoint, requestBody);
+      console.log('Status update response:', response);
       
       if (response.status === 200) {
         // Refresh appointments after status update
@@ -575,6 +627,7 @@ const Calendar = () => {
       }
     } catch (error) {
       console.error('Error updating appointment status:', error);
+      console.error('Error details:', error.response?.data);
       Alert.alert('Error', 'Failed to update appointment status. Please try again.');
     }
   };

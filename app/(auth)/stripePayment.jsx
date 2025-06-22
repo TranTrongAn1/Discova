@@ -13,8 +13,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { clearTokens } from './api';
 
-const StripePaymentScreen = () => {
+const StripePayment = () => {
   const params = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
   
@@ -24,18 +25,9 @@ const StripePaymentScreen = () => {
     PaymentMethodType,
     Amount,
     Currency,
-    bookingData: bookingDataString,
+    orderId,
+    orderType
   } = params;
-
-  const bookingData = JSON.parse(bookingDataString);
-
-  // Now you can access all properties
-  const psychologist_name = bookingData.psychologist_name;
-  const booking_name = bookingData.name;
-  const session_type = bookingData.session_type;
-  const date = bookingData.slotDetails?.date || bookingData.date;
-  const time = bookingData.slotDetails?.timeRange || bookingData.time;
-  const parent_notes = bookingData.parent_notes;
 
   const handlePayment = async () => {
     setLoading(true);
@@ -45,7 +37,7 @@ const StripePaymentScreen = () => {
         PaymentIntent,
         Amount,
         Currency,
-        bookingData
+        orderId
       });
 
       // Use the client_secret to create a Stripe Checkout session
@@ -70,12 +62,16 @@ const StripePaymentScreen = () => {
         // For now, we'll show success (in real implementation, verify with backend)
         Alert.alert(
           'Payment Successful! 🎉',
-          `Your payment of $${Amount} ${Currency} has been processed successfully. Your appointment has been confirmed.`,
+          `Your payment of $${Amount} ${Currency} has been processed successfully. You can now access your psychologist dashboard.`,
           [
             {
-              text: 'Continue to Success Page',
+              text: 'Continue to Dashboard',
               onPress: () => {
-                router.replace('/(booking)/success');
+                if (orderType === 'registration') {
+                  router.replace('/(Pychologist)/profile');
+                } else {
+                  router.replace('/(booking)/success');
+                }
               }
             }
           ]
@@ -130,36 +126,40 @@ const StripePaymentScreen = () => {
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Payment Details</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={() => {
+            Alert.alert(
+              'Logout',
+              'Are you sure you want to logout?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Logout', 
+                  style: 'destructive',
+                  onPress: async () => {
+                    await clearTokens();
+                    router.replace('/login');
+                  }
+                }
+              ]
+            );
+          }}
+        >
+          <Ionicons name="log-out-outline" size={24} color="white" />
+        </TouchableOpacity>
       </LinearGradient>
 
       <ScrollView style={styles.content}>
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="card-outline" size={24} color="#6c5ce7" />
-            <Text style={styles.cardTitle}>Appointment Information</Text>
+            <Text style={styles.cardTitle}>Order Information</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Psychologist</Text>
-            <Text style={styles.value}>{psychologist_name}</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Patient Name</Text>
-            <Text style={styles.value}>{booking_name}</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Session Type</Text>
-            <Text style={styles.value}>
-              {session_type === 'OnlineMeeting' ? 'Online Meeting' : 'In-Person'}
-            </Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Date & Time</Text>
-            <Text style={styles.value}>{date}, {time}</Text>
+            <Text style={styles.label}>Order ID</Text>
+            <Text style={styles.value}>{orderId}</Text>
           </View>
           
           <View style={styles.infoRow}>
@@ -167,12 +167,17 @@ const StripePaymentScreen = () => {
             <Text style={styles.value}>${Amount} {Currency}</Text>
           </View>
           
-          {parent_notes && (
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Notes</Text>
-              <Text style={styles.value}>{parent_notes}</Text>
-            </View>
-          )}
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Payment Method</Text>
+            <Text style={styles.value}>{PaymentMethodType}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Order Type</Text>
+            <Text style={styles.value}>
+              {orderType === 'registration' ? 'Psychologist Registration' : 'Appointment Booking'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.securityCard}>
@@ -210,7 +215,7 @@ const StripePaymentScreen = () => {
   );
 };
 
-export default StripePaymentScreen;
+export default StripePayment;
 
 const styles = StyleSheet.create({
   container: {
@@ -231,9 +236,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-  },
-  headerSpacer: {
-    width: 24,
   },
   content: {
     flex: 1,
@@ -342,4 +344,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-});
+  logoutButton: {
+    marginLeft: 'auto',
+  },
+}); 
