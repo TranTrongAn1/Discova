@@ -1,8 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
 import { Stack } from 'expo-router'
+import React from 'react'
 
-const ProfileLayout = () => {
+const ParentProfileLayout = () => {
   return (
         <Stack
       screenOptions={{
@@ -19,4 +18,4 @@ const ProfileLayout = () => {
   )
 }
 
-export default ProfileLayout
+export default ParentProfileLayout
