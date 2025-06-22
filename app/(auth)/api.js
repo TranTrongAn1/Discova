@@ -7,34 +7,72 @@ const api = axios.create({
 });
 
 let hasRedirectedToWelcome = false; // to avoid repeated redirects
+let lastTokenCheck = null; // to avoid repeated token checks
 
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('access_token');
+    try {
+      const token = await AsyncStorage.getItem('access_token');
 
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
+      if (token) {
+        config.headers.Authorization = `Token ${token}`;
 
-      // Redirect to welcome only once
-      if (!hasRedirectedToWelcome && router?.replace) {
-        hasRedirectedToWelcome = true;
-        setTimeout(() => {
-          router.replace('/welcome');
-        }, 0); // Delay to avoid interfering with request
+        // Only redirect to welcome if we haven't already and we're not already on a protected route
+        if (!hasRedirectedToWelcome && router?.replace) {
+          try {
+            const currentPath = router.pathname;
+            const isOnProtectedRoute = currentPath.includes('/(Pychologist)') ||
+                                      currentPath.includes('/(parent)') ||
+                                      currentPath.includes('/(booking)');
+
+            if (!isOnProtectedRoute) {
+              hasRedirectedToWelcome = true;
+              setTimeout(() => {
+                router.replace('/welcome');
+              }, 0);
+            }
+          } catch (redirectError) {
+            console.warn('Redirect error:', redirectError);
+          }
+        }
+      } else {
+        // Only log warning occasionally to reduce spam
+        const now = Date.now();
+        if (!lastTokenCheck || now - lastTokenCheck > 5000) { // Log max once every 5 seconds
+          console.warn('⚠️ No access token found - user not authenticated');
+          lastTokenCheck = now;
+        }
       }
-
-    } else {
-      console.warn('⚠️ No access token found');
-
-      // Optional: redirect to login if no token
-      // if (!router.canGoBack?.()) {
-      //   router.replace('/login');
-      // }
+    } catch (error) {
+      console.error('API interceptor error:', error);
     }
 
     return config;
   },
   (error) => {
+    console.error('API request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle common errors
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      console.warn('Authentication failed - clearing tokens');
+      clearTokens();
+      // Don't redirect here to avoid loops
+    }
+
+    // Handle server errors
+    if (error.response?.status >= 500) {
+      console.error('Server error:', error.response?.status, error.response?.data);
+    }
+
     return Promise.reject(error);
   }
 );
@@ -47,12 +85,12 @@ export async function checkPsychologistProfile() {
 export async function createBasicPsychologistProfile() {
   try {
     console.log('Creating basic psychologist profile...');
-    
+
     // Get current date and add 1 year for license expiry
     const currentDate = new Date();
     const expiryDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), currentDate.getDate());
     const expiryDateString = expiryDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-    
+
     const profileData = {
       first_name: 'New',
       last_name: 'Psychologist',
@@ -64,9 +102,9 @@ export async function createBasicPsychologistProfile() {
       offers_online_sessions: true,
       office_address: 'Temporary Office Address - To be updated'
     };
-    
+
     console.log('Sending profile data:', profileData);
-    
+
     const response = await api.post('/api/psychologists/profile/', profileData);
     console.log('Basic profile created:', response.data);
     return response.data;
@@ -129,17 +167,8 @@ export async function initiatePayment(orderId, successUrl, cancelUrl, provider =
 }
 
 export async function checkPaymentStatus(orderId) {
-  try {
-    console.log('Checking payment status for order:', orderId);
-    const response = await api.get(`/api/payments/orders/${orderId}/status/`);
-    console.log('Payment status response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Error checking payment status:', error);
-    console.error('Error response:', error.response?.data);
-    console.error('Error status:', error.response?.status);
-    throw error;
-  }
+  const response = await api.get(`/api/payments/orders/${orderId}/status/`);
+  return response.data;
 }
 
 export async function clearTokens() {

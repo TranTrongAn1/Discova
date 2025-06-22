@@ -2,13 +2,21 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const Choice = () => {
+function Choice() {
   const [selectedRole, setSelectedRole] = useState(null);
 
   const handleRolePress = (role) => {
-    setSelectedRole((prev) => (prev === role ? null : role)); // Toggle selection
+    setSelectedRole((prev) => (prev === role ? null : role));
+  };
+
+  const handleContinue = () => {
+    if (selectedRole === 'parent') {
+      router.replace('/(parent)/home');
+    } else if (selectedRole === 'psychologist') {
+      router.push('/payment');
+    }
   };
   
   return (
@@ -39,24 +47,18 @@ const Choice = () => {
         <TouchableOpacity
           style={[
             styles.Button,
-            !selectedRole && { opacity: 0.5 }, // Disable visual
+            !selectedRole && { opacity: 0.5 },
           ]}
           activeOpacity={selectedRole ? 0.8 : 1}
-          onPress={() => {
-                if (selectedRole === 'parent') {
-                router.replace('/(parent)/home');
-                } else if (selectedRole === 'psychologist') {
-                router.push('/payment');
-                }
-            }}
-          disabled={!selectedRole} // Disable if no role selected
+          onPress={handleContinue}
+          disabled={!selectedRole}
         >
           <Text style={styles.buttonText}>Tiếp Theo</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-};
+}
 
 export default Choice;
 
