@@ -4,13 +4,15 @@
     "slug": "Discova",
     "version": "1.0.0",
     "orientation": "portrait",
+    "owner": "fusia",
     "icon": "./assets/images/app.png",
     "scheme": "discova",
     "owner": "fusia",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fusia.discova"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,6 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.huykhoi_1509.Discova"
+
     },
     "web": {
       "bundler": "metro",
@@ -41,6 +44,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4083ffc9-d234-47b4-953c-813c1cf70b7a"
+      }
     }
   }
 }

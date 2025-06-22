@@ -1,34 +1,26 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Button, Alert, TouchableOpacity } from 'react-native';
+import { CardField, useConfirmPayment, initStripe } from '@stripe/stripe-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import React, { useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
 
 const StripePaymentScreen = () => {
-  const params = useLocalSearchParams();
-  const [loading, setLoading] = useState(false);
-  
-  const {
+  // Receive the parameters exactly as sent from ConfirmPage
+    const {
     clientSecret,
     PaymentIntent,
     PaymentMethodType,
     Amount,
     Currency,
     bookingData: bookingDataString,
-  } = params;
-
+  } = useLocalSearchParams();
+  
+  const [cardDetails, setCardDetails] = useState();
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [stripeInitialized, setStripeInitialized] = useState(false);
+  const { confirmPayment } = useConfirmPayment();
   const bookingData = JSON.parse(bookingDataString);
-
+  
   // Now you can access all properties
   const psychologist_name = bookingData.psychologist_name;
   const booking_name = bookingData.name;
@@ -36,310 +28,223 @@ const StripePaymentScreen = () => {
   const date = bookingData.slotDetails?.date || bookingData.date;
   const time = bookingData.slotDetails?.timeRange || bookingData.time;
   const parent_notes = bookingData.parent_notes;
+  // Initialize Stripe when component mounts
+  useEffect(() => {
+    const initializeStripe = async () => {
+      try {
+        await initStripe({
+          publishableKey: 'pk_test_51RW4q4Rq8N8jdwzZXus9YjEnUhdkk3TZIll62vHWM7CBwRaqIRnmjPDKXWx1ytsJ6RrHurL77M4yo0uMjMXVdZV400DQhwWn35', // Replace with your actual publishable key
+          merchantIdentifier: 'merchant.identifier', // Optional
+        });
+        setStripeInitialized(true);
+      } catch (error) {
+        console.error('Stripe initialization failed:', error);
+        Alert.alert('Error', 'Failed to initialize payment system');
+      }
+    };
 
-  const handlePayment = async () => {
+    initializeStripe();
+  }, []);
+
+  // Remove the server-side Stripe initialization - this should be on your backend
+  // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // ❌ Remove this line
+
+  const handlePayPress = async () => {
+    if (!stripeInitialized) {
+      Alert.alert('Error', 'Payment system is not ready. Please wait a moment.');
+      return;
+    }
+
+    if (!cardDetails?.complete) {
+      Alert.alert('Please enter complete card details');
+      return;
+    }
+
+    if (!clientSecret) {
+      Alert.alert('Error', 'Client secret is missing. Please check your payment setup.');
+      return;
+    }
+
     setLoading(true);
+    
     try {
-      console.log('Processing payment with:', {
-        clientSecret,
-        PaymentIntent,
-        Amount,
-        Currency,
-        bookingData
+      const { paymentIntent, error } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+        paymentMethodData: {
+          billingDetails: {
+            name: 'Test User',
+            email: 'test@example.com',
+          },
+        },
       });
 
-      // Use the client_secret to create a Stripe Checkout session
-      // The backend already provided the client_secret from initiate_payment
-      if (!clientSecret) {
-        throw new Error('Client secret is missing');
+      if (error) {
+        console.error('Payment error:', error);
+        Alert.alert('Payment failed', error.message);
+      } else if (paymentIntent) {
+        console.log('Payment successful:', paymentIntent);
+        setResult(paymentIntent);
+        Alert.alert('Success', 'Payment completed successfully!',[
+          {
+            text: 'OK',
+            onPress: () => router.push('/success'), // ✅ Redirect to success page
+          },
+        ]);
       }
-
-      // Create Stripe Checkout URL using the payment_intent_id
-      // The client_secret is used for the payment intent
-      const stripeCheckoutUrl = `https://checkout.stripe.com/pay/${PaymentIntent}`;
-      
-      console.log('Opening Stripe Checkout:', stripeCheckoutUrl);
-      
-      // Open Stripe Checkout in browser
-      const result = await WebBrowser.openBrowserAsync(stripeCheckoutUrl);
-      
-      console.log('Browser result:', result);
-      
-      if (result.type === 'success') {
-        // Check if payment was successful by checking the order status
-        // For now, we'll show success (in real implementation, verify with backend)
-        Alert.alert(
-          'Payment Successful! 🎉',
-          `Your payment of $${Amount} ${Currency} has been processed successfully. Your appointment has been confirmed.`,
-          [
-            {
-              text: 'Continue to Success Page',
-              onPress: () => {
-                router.replace('/(booking)/success');
-              }
-            }
-          ]
-        );
-      } else {
-        Alert.alert(
-          'Payment Cancelled',
-          'Payment was cancelled. You can try again.',
-          [
-            { text: 'Try Again', onPress: () => setLoading(false) },
-            { text: 'Cancel', onPress: () => router.back() }
-          ]
-        );
-      }
-      
-    } catch (error) {
-      console.error('Payment error:', error);
-      Alert.alert(
-        'Payment Error', 
-        'Failed to process payment. Please check your internet connection and try again.',
-        [
-          { text: 'Try Again', onPress: () => setLoading(false) },
-          { text: 'Cancel', onPress: () => router.back() }
-        ]
-      );
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
+        {
+          text: 'OK',
+          onPress: () => router.push('/failed'),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    Alert.alert(
-      'Cancel Payment',
-      'Are you sure you want to cancel this payment?',
-      [
-        { text: 'No', style: 'cancel' },
-        { text: 'Yes', onPress: () => router.back() }
-      ]
-    );
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#6c5ce7', '#a29bfe']}
-        style={styles.header}
+<View style={styles.container}>
+      {/* Header with summary + amount */}
+      <View style={styles.headerRow}>
+        <Text style={styles.summaryTitle}>Summary</Text>
+        <Text style={styles.amount}>Total: {Amount} {Currency}</Text>
+      </View>
+
+      {/* Order Detail Box */}
+      <View style={styles.summaryBox}>
+        <Text style={styles.label}>Tên bác sĩ tâm lý:</Text>
+        <Text style={styles.value}>{psychologist_name}</Text>
+
+        <Text style={styles.label}>Tên người hẹn:</Text>
+        <Text style={styles.value}>{booking_name}</Text>
+
+        <Text style={styles.label}>Hình thức tư vấn:</Text>
+        <Text style={styles.value}>{session_type}</Text>
+
+        <Text style={styles.label}>Thời gian:</Text>
+        <Text style={styles.value}>{date},{time}</Text>
+
+        <Text style={styles.label}>Ghi chú:</Text>
+        <Text style={styles.value}>{parent_notes || '—'}</Text>
+      </View>
+
+      {/* Card Input */}
+      <CardField
+        postalCodeEnabled={false}
+        placeholder={{ number: '4242 4242 4242 4242' }}
+        cardStyle={styles.card}
+        style={styles.cardContainer}
+        onCardChange={card => setCardDetails(card)}
+      />
+
+      {/* Payment Button */}
+      <TouchableOpacity
+        style={[styles.button, (loading || !cardDetails?.complete) && styles.disabled]}
+        onPress={handlePayPress}
+        disabled={loading || !cardDetails?.complete}
+        activeOpacity={0.8}
       >
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment Details</Text>
-        <View style={styles.headerSpacer} />
-      </LinearGradient>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="card-outline" size={24} color="#6c5ce7" />
-            <Text style={styles.cardTitle}>Appointment Information</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Psychologist</Text>
-            <Text style={styles.value}>{psychologist_name}</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Patient Name</Text>
-            <Text style={styles.value}>{booking_name}</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Session Type</Text>
-            <Text style={styles.value}>
-              {session_type === 'OnlineMeeting' ? 'Online Meeting' : 'In-Person'}
-            </Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Date & Time</Text>
-            <Text style={styles.value}>{date}, {time}</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Amount</Text>
-            <Text style={styles.value}>${Amount} {Currency}</Text>
-          </View>
-          
-          {parent_notes && (
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Notes</Text>
-              <Text style={styles.value}>{parent_notes}</Text>
-            </View>
-          )}
+        <Text style={styles.buttonText}>
+          {loading ? 'Processing...' : 'Complete Order'}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.push('/bookingPage')}
+      >
+        <Text style={styles.backButtonText}>← Quay về trang chỉnh sửa thông tin</Text>
+      </TouchableOpacity>
+      {/* Success Info
+      {result && (
+        <View style={styles.success}>
+          <Text style={styles.successText}>✅ Payment Successful!</Text>
+          <Text>Payment Intent ID: {result.id}</Text>
+          <Text>Status: {result.status}</Text>
         </View>
-
-        <View style={styles.securityCard}>
-          <Ionicons name="shield-checkmark" size={20} color="#00b894" />
-          <Text style={styles.securityText}>
-            Your payment will be processed securely through Stripe Checkout
-          </Text>
-        </View>
-
-        <TouchableOpacity 
-          style={[styles.payButton, loading && styles.buttonDisabled]} 
-          onPress={handlePayment}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="card" size={20} color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.payButtonText}>PROCEED TO PAYMENT</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.cancelButton} 
-          onPress={handleCancel}
-          disabled={loading}
-        >
-          <Ionicons name="close-circle" size={20} color="#e74c3c" style={styles.buttonIcon} />
-          <Text style={styles.cancelButtonText}>CANCEL PAYMENT</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      )} */}
+    </View>
   );
 };
 
-export default StripePaymentScreen;
-
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  headerSpacer: {
-    width: 24,
-  },
-  content: {
-    flex: 1,
     padding: 20,
+    paddingTop: 100,
+    backgroundColor: '#fff',
+    flex: 1,
   },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginLeft: 10,
-  },
-  infoRow: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f4',
+    marginBottom: 15,
   },
-  label: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  value: {
-    fontSize: 14,
-    color: '#333',
+  summaryTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    textAlign: 'right',
-    flex: 1,
-    marginLeft: 10,
+    color: '#8E97FD',
   },
-  securityCard: {
-    backgroundColor: '#e8f5e8',
+  amount: {
+    fontSize: 25,
+    fontWeight: '700',
+    color: '#8E97FD',
+  },
+  summaryBox: {
+    borderWidth: 1,
+    borderColor: '#ddd',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 30,
-    flexDirection: 'row',
+    marginBottom: 20,
+    backgroundColor: '#f9f9f9',
+  },
+  label: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 8,
+  },
+  value: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#000',
+  },
+  cardContainer: {
+    height: 50,
+    marginVertical: 20,
+  },
+  card: {
+    backgroundColor: '#fff',
+    textColor: '#000',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 6,
+  },
+  button: {
+    marginTop: 20,
+    backgroundColor: '#8E97FD',
+    paddingVertical: 15,
+    borderRadius: 10,
     alignItems: 'center',
+    marginBottom: 10,
   },
-  securityText: {
-    fontSize: 14,
-    color: '#00b894',
-    marginLeft: 10,
-    flex: 1,
+  disabled: {
+    opacity: 0.6,
   },
-  payButton: {
-    backgroundColor: '#00b894',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 15,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    shadowColor: '#00b894',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: '#bdc3c7',
-  },
-  payButtonText: {
+  buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
     fontSize: 16,
+    fontWeight: '600',
   },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  cancelButton: {
-    backgroundColor: 'white',
-    paddingVertical: 16,
-    borderRadius: 12,
+  backButton: {
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e74c3c',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    padding: 10,
   },
-  cancelButtonText: {
-    color: '#e74c3c',
-    fontWeight: 'bold',
-    fontSize: 16,
+  backButtonText: {
+    marginTop: 20,
+    color: '#8E97FD',
+    fontSize: 15,
   },
 });
+
+
+export default StripePaymentScreen;

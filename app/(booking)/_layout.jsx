@@ -1,8 +1,9 @@
-import { Stack } from 'expo-router'
+import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-import { StripeProvider } from '../../components/StripeWrapper'
+import { Stack } from 'expo-router'
+import { StripeProvider } from '@stripe/stripe-react-native'
 
-const ProfileLayout = () => {
+const BookingLayout = () => {
   return (
   <StripeProvider publishableKey="pk_test_51RW4q4Rq8N8jdwzZXus9YjEnUhdkk3TZIll62vHWM7CBwRaqIRnmjPDKXWx1ytsJ6RrHurL77M4yo0uMjMXVdZV400DQhwWn35">
         <Stack
@@ -20,4 +21,4 @@ const ProfileLayout = () => {
   )
 }
 
-export default ProfileLayout
+export default BookingLayout

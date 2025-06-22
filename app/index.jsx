@@ -1,14 +1,14 @@
-import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import 'react-native-gesture-handler';
+import { Animated, StyleSheet, View, Text, Dimensions, TouchableOpacity, Image } from 'react-native';
 import Frame from '../assets/images/Frame.png';
 import Logo from '../assets/images/Logo.png';
+import { router } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+import 'react-native-gesture-handler';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const router = useRouter();
   // Separate animations for image and content
   const imageFade = useRef(new Animated.Value(0)).current;
   const imageTranslate = useRef(new Animated.Value(-40)).current;
@@ -18,19 +18,18 @@ export default function HomeScreen() {
 
   const fade = useRef(new Animated.Value(1)).current;
   const slide = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     // Animate image first
     Animated.parallel([
       Animated.timing(imageFade, {
         toValue: 1,
         duration: 700, // faster
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
       Animated.timing(imageTranslate, {
         toValue: 0,
         duration: 800,
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
     ]).start();
 
@@ -40,52 +39,46 @@ export default function HomeScreen() {
         toValue: 1,
         duration: 1000,
         delay: 200, // small delay after image
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
       Animated.timing(contentTranslate, {
         toValue: 0,
         duration: 1000,
         delay: 200,
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
     ]).start();
-
-    // Navigate to welcome after animation
-    const timer = setTimeout(() => {
-      router.replace('/welcome');
-    }, 2000);
-
-    return () => clearTimeout(timer);
   }, []);
+
 
   const handleLoginPress = () => {
     Animated.parallel([
       Animated.timing(fade, {
         toValue: 0,
         duration: 400,
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
       Animated.timing(slide, {
         toValue: -200,
         duration: 400,
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
     ]).start(() => {
       router.push('/login'); // Navigate AFTER animation finishes
     });
   };
 
-  const handleRegisterPress = () => {
+    const handleRegisterPress = () => {
     Animated.parallel([
       Animated.timing(fade, {
         toValue: 0,
         duration: 400,
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
       Animated.timing(slide, {
         toValue: -200,
         duration: 400,
-        useNativeDriver: false, // Disable for web compatibility
+        useNativeDriver: true,
       }),
     ]).start(() => {
       router.push('/register'); // Navigate AFTER animation finishes
@@ -101,12 +94,12 @@ export default function HomeScreen() {
         Animated.timing(fade, {
           toValue: 1,
           duration: 400,
-          useNativeDriver: false, // Disable for web compatibility
+          useNativeDriver: true,
         }),
         Animated.timing(slide, {
           toValue: 0,
           duration: 400,
-          useNativeDriver: false, // Disable for web compatibility
+          useNativeDriver: true,
         }),
       ]).start();
     }, [])
@@ -162,6 +155,7 @@ export default function HomeScreen() {
     </Animated.View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -222,4 +216,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
 });
