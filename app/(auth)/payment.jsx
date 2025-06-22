@@ -1,24 +1,61 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import api from './api';
 
 const Payment = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedPlan) {
       Alert.alert('Thông báo', 'Vui lòng chọn một gói đăng ký.');
-    } else {
-      Alert.alert('Tiếp tục', `Bạn đã chọn gói ${selectedPlan} VND/tháng`);
-      // Navigate to next screen or handle logic here
-      router.push('/CVsubmitted')
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Here you would integrate with your payment gateway
+      // For now, we'll simulate a successful payment
+      
+      // Update user subscription status
+      const userType = await AsyncStorage.getItem('user_type');
+      const userId = await AsyncStorage.getItem('user_id');
+      
+      if (userType === 'Psychologist') {
+        // Update psychologist subscription
+        await api.patch(`/api/psychologists/manage/${userId}/`, {
+          subscription_plan: selectedPlan,
+          subscription_status: 'active'
+        });
+      }
+
+      Alert.alert(
+        'Thanh toán thành công!',
+        `Bạn đã đăng ký gói ${selectedPlan} VND/tháng. Bây giờ hãy tạo hồ sơ của bạn.`,
+        [
+          {
+            text: 'Tiếp tục',
+            onPress: () => {
+              // Redirect to profile creation
+              router.replace('/(Pychologist)/EditProfile');
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Lỗi', 'Có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,8 +98,14 @@ const Payment = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleContinue}>
-        <Text style={styles.buttonText}>Tiếp tục</Text>
+      <TouchableOpacity 
+        style={[styles.button, loading && styles.buttonDisabled]} 
+        onPress={handleContinue}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Đang xử lý...' : 'Tiếp tục'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -114,6 +157,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
   },
   buttonText: {
     color: '#fff',

@@ -1,4 +1,4 @@
-import { Dimensions, ImageBackground, StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { Dimensions, ImageBackground, StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import top from '../../assets/images/TopCalendar.png';
 import { Feather } from '@expo/vector-icons';
@@ -51,7 +51,7 @@ const Calendar = () => {
   const itemsPerPage = 6;
   const [currentPage, setCurrentPage] = useState(1);
   const pastItemsPerPage = 6;
-const [pastCurrentPage, setPastCurrentPage] = useState(1);
+  const [pastCurrentPage, setPastCurrentPage] = useState(1);
 
   // Function to get Vietnamese day name
   const getVietnameseDayName = (dayOfWeek) => {
@@ -188,12 +188,12 @@ const [pastCurrentPage, setPastCurrentPage] = useState(1);
     ? pastAppointments
     : pastAppointments.filter(a => a.appointment_status === selectedPastStatus);
 
-const totalPastPages = Math.ceil(filteredPastAppointments.length / pastItemsPerPage);
+  const totalPastPages = Math.ceil(filteredPastAppointments.length / pastItemsPerPage);
 
-const paginatedPastAppointments = filteredPastAppointments.slice(
-  (pastCurrentPage - 1) * pastItemsPerPage,
-  pastCurrentPage * pastItemsPerPage
-);
+  const paginatedPastAppointments = filteredPastAppointments.slice(
+    (pastCurrentPage - 1) * pastItemsPerPage,
+    pastCurrentPage * pastItemsPerPage
+  );
 
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
   const paginatedAppointments = filteredAppointments.slice(
@@ -474,29 +474,29 @@ const paginatedPastAppointments = filteredPastAppointments.slice(
           )}
 
         </View>
-{totalPastPages > 1 && (
-  <View style={styles.paginationContainer}>
-    <TouchableOpacity
-      style={[styles.pageButton, pastCurrentPage === 1 && styles.disabledButton]}
-      onPress={() => setPastCurrentPage((prev) => Math.max(prev - 1, 1))}
-      disabled={pastCurrentPage === 1}
-    >
-      <Text style={styles.pageButtonText}>Trước</Text>
-    </TouchableOpacity>
+        {totalPastPages > 1 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              style={[styles.pageButton, pastCurrentPage === 1 && styles.disabledButton]}
+              onPress={() => setPastCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={pastCurrentPage === 1}
+            >
+              <Text style={styles.pageButtonText}>Trước</Text>
+            </TouchableOpacity>
 
-    <Text style={styles.pageIndicator}>
-      {pastCurrentPage} / {totalPastPages}
-    </Text>
+            <Text style={styles.pageIndicator}>
+              {pastCurrentPage} / {totalPastPages}
+            </Text>
 
-    <TouchableOpacity
-      style={[styles.pageButton, pastCurrentPage === totalPastPages && styles.disabledButton]}
-      onPress={() => setPastCurrentPage((prev) => Math.min(prev + 1, totalPastPages))}
-      disabled={pastCurrentPage === totalPastPages}
-    >
-      <Text style={styles.pageButtonText}>Tiếp</Text>
-    </TouchableOpacity>
-  </View>
-)}
+            <TouchableOpacity
+              style={[styles.pageButton, pastCurrentPage === totalPastPages && styles.disabledButton]}
+              onPress={() => setPastCurrentPage((prev) => Math.min(prev + 1, totalPastPages))}
+              disabled={pastCurrentPage === totalPastPages}
+            >
+              <Text style={styles.pageButtonText}>Tiếp</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
       </View>
       <CancelModal
@@ -604,10 +604,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
     borderRadius: 10,
     padding: 15,
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: 5
+
+      },
+
+      android: {
+
+        elevation: 5,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 5px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 3,
   },
   cardText: {

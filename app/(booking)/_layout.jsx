@@ -1,7 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
 import { Stack } from 'expo-router'
-import { StripeProvider } from '@stripe/stripe-react-native'
+import React from 'react'
+import { StripeProvider } from '../../components/StripeWrapper'
 
 const ProfileLayout = () => {
   return (

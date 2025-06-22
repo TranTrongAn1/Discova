@@ -1,14 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-  Animated,
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearTokens } from './api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -20,29 +22,76 @@ const Welcome = () => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
-      useNativeDriver: true,
+      useNativeDriver: false, // Disable native driver for web compatibility
     }).start();
 
     Animated.timing(translateY, {
       toValue: 0,
       duration: 1000,
-      useNativeDriver: true,
+      useNativeDriver: false, // Disable native driver for web compatibility
     }).start();
   }, []);
 
   const checkUserTypeAndRedirect = async () => {
     try {
+      console.log('=== WELCOME DEBUG START ===');
+      
       const userType = await AsyncStorage.getItem('user_type');
+      const token = await AsyncStorage.getItem('access_token');
+
+      console.log('Welcome - User type:', userType);
+      console.log('Welcome - Token exists:', !!token);
+      console.log('Welcome - Token value:', token ? token.substring(0, 20) + '...' : 'null');
+
+      if (!token) {
+        console.log('No token found, redirecting to login');
+        router.replace('/login');
+        return;
+      }
+
+      // Test API call first with better error handling
+      console.log('Testing API call...');
+      try {
+        const testResponse = await fetch('https://kmdiscova.id.vn/api/auth/me/', {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('Test API response status:', testResponse.status);
+        
+        if (testResponse.status === 401) {
+          console.log('Token is invalid, clearing and redirecting to login');
+          await clearTokens();
+          router.replace('/login');
+          return;
+        } else if (testResponse.status === 200) {
+          console.log('Token is valid, proceeding with navigation');
+        }
+      } catch (apiError) {
+        console.log('Test API call failed:', apiError);
+        // If API test fails, we'll still try to proceed but log the issue
+        console.log('Proceeding despite API test failure...');
+      }
 
       if (userType === 'Parent') {
+        console.log('Parent user, redirecting to home');
         router.replace('/(parent)/home');
       } else if (userType === 'Psychologist') {
-        router.replace('/payment');
+        console.log('Psychologist user, redirecting to profile');
+        router.replace('/(Pychologist)/profile');
       } else {
         console.warn('Unknown user type:', userType);
+        Alert.alert('Error', 'Unknown account type. Please login again.');
+        await clearTokens();
+        router.replace('/login');
       }
+      
+      console.log('=== WELCOME DEBUG END ===');
     } catch (error) {
       console.error('Error reading user_type:', error);
+      Alert.alert('Error', 'Cannot read account information. Please login again.');
+      router.replace('/login');
     }
   };
 

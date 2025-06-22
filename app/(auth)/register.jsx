@@ -1,27 +1,27 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-  TouchableWithoutFeedback,
-  Keyboard,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
-  Animated
-} from 'react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Toast from 'react-native-toast-message';
 import axios from 'axios';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
+import * as Facebook from 'expo-auth-session/providers/facebook';
+import * as Google from 'expo-auth-session/providers/google';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Animated,
+    Dimensions,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
+} from 'react-native';
+import Toast from 'react-native-toast-message';
 
 
 WebBrowser.maybeCompleteAuthSession();
@@ -58,24 +58,36 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
     }
   }, [requestGoogle, responseGoogle]);
 
-
-  // Facebook
-  const [requestFacebook, responseFacebook, promptFacebook] = Facebook.useAuthRequest({
-    clientId: '1427302181956582', // Replace with your real FB App ID
-  });
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
   useEffect(() => {
+    console.log("=== RESPONSE DEBUG ===");
+    console.log("Google Response:", JSON.stringify(responseGoogle, null, 2));
+    console.log("=====================");
+
     if (responseGoogle?.type === 'success') {
       const token = responseGoogle.authentication.accessToken;
       handleSocialLogin('google', token);
+    } else if (responseGoogle?.type === 'error') {
+      console.log("Google Auth Error:", responseGoogle.error);
+      Toast.show({
+        type: 'error',
+        text1: 'Google Auth Error',
+        text2: responseGoogle.error?.message || 'Unknown error',
+      });
     }
+  }, [responseGoogle]);
 
+  // Facebook Auth
+  const [requestFacebook, responseFacebook, promptFacebook] = Facebook.useAuthRequest({
+    clientId: '1427302181956582',
+  });
+
+  useEffect(() => {
     if (responseFacebook?.type === 'success') {
       const token = responseFacebook.authentication.accessToken;
       handleSocialLogin('facebook', token);
     }
-  }, [responseGoogle, responseFacebook]);
+  }, [responseFacebook]);
+
   const handleSocialLogin = async (provider, token) => {
     try {
       const endpoint = provider === 'google'
@@ -94,7 +106,7 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
         text1: `Đăng nhập với ${provider} thành công!`,
       });
 
-      router.replace('/login'); // or dashboard
+      router.replace('/login');
     } catch (error) {
       Toast.show({
         type: 'error',
@@ -104,21 +116,41 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
     }
   };
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 1000,
-        useNativeDriver: true,
+        useNativeDriver: false, // Disable for web compatibility
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 1000,
-        useNativeDriver: true,
+        useNativeDriver: false, // Disable for web compatibility
       }),
     ]).start();
   }, []);
 
+  const animatePressIn = () => {
+    Animated.spring(fadeAnim, {
+      toValue: 0.95,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: false, // Disable for web compatibility
+    }).start();
+  };
+
+  const animatePressOut = () => {
+    Animated.spring(fadeAnim, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: false, // Disable for web compatibility
+    }).start();
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -126,23 +158,12 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1, backgroundColor: '#fff' }}
       >
-        {/* scroll in case content is still taller than screen */}
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              transform: [{ translateX: slideAnim }],
-            }}
-          >
-
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateX: slideAnim }] }}>
             <Toast />
-            <TouchableOpacity style={styles.backButton} onPress={router.back}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(auth)/welcome')}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </TouchableOpacity>
-
 
             <Text style={styles.Welcome}>Tạo Tài Khoản</Text>
 
@@ -158,11 +179,8 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
               </TouchableOpacity>
             </View>
 
-
             <Text style={styles.Text}>HOẶC ĐĂNG KÝ BẰNG EMAIL</Text>
 
-
-            {/* Địa chỉ email */}
             <TextInput
               style={styles.input}
               placeholder="Địa chỉ email"
@@ -170,9 +188,11 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
             />
 
-            {/* Mật khẩu */}
             <View style={styles.pwdWrapper}>
               <TextInput
                 style={styles.input2}
@@ -181,11 +201,11 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
                 secureTextEntry={!showPwd}
                 value={password}
                 onChangeText={setPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
               />
-              <TouchableOpacity
-                onPress={() => setShowPwd(!showPwd)}
-                style={styles.eyeBtn}
-              >
+              <TouchableOpacity onPress={() => setShowPwd(!showPwd)} style={styles.eyeBtn}>
                 <Ionicons name={showPwd ? 'eye-off' : 'eye'} size={22} color="#A1A4B2" />
               </TouchableOpacity>
             </View>
@@ -198,14 +218,15 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
                 secureTextEntry={!showPwd1}
                 value={passwordConfirm}
                 onChangeText={setPasswordConfirm}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
               />
-              <TouchableOpacity
-                onPress={() => setShowPwd1(!showPwd1)}
-                style={styles.eyeBtn}
-              >
+              <TouchableOpacity onPress={() => setShowPwd1(!showPwd1)} style={styles.eyeBtn}>
                 <Ionicons name={showPwd1 ? 'eye-off' : 'eye'} size={22} color="#A1A4B2" />
               </TouchableOpacity>
             </View>
+
             <Text style={styles.Text12}>Bạn là</Text>
             <View style={styles.userTypeContainer}>
               <TouchableOpacity
@@ -230,87 +251,58 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
               <Text style={styles.Text3}>
                 Tôi đã đọc <Text style={styles.terms}>Chính sách quyền riêng tư</Text>
               </Text>
-              <TouchableOpacity
-                style={styles.checkbox}
-                onPress={() => setAgreePolicy(!agreePolicy)}
-              >
+              <TouchableOpacity style={styles.checkbox} onPress={() => setAgreePolicy(!agreePolicy)}>
                 {agreePolicy && <View style={styles.checkboxTick} />}
               </TouchableOpacity>
             </View>
 
-            {/* Đăng ký */}
-            <TouchableOpacity style={styles.Button} activeOpacity={0.8} onPress={async () => {
-              // Basic validation
-              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            <TouchableOpacity
+              style={styles.Button}
+              activeOpacity={0.8}
+              onPress={async () => {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-              if (!email || !password || !passwordConfirm) {
-                Toast.show({
-                  type: 'error',
-                  text1: 'Vui lòng điền đầy đủ thông tin',
-                });
-                return;
-              }
+                if (!email || !password || !passwordConfirm) {
+                  Toast.show({ type: 'error', text1: 'Vui lòng điền đầy đủ thông tin' });
+                  return;
+                }
 
-              if (!emailRegex.test(email)) {
-                Toast.show({
-                  type: 'error',
-                  text1: 'Email không hợp lệ',
-                });
-                return;
-              }
+                if (!emailRegex.test(email)) {
+                  Toast.show({ type: 'error', text1: 'Email không hợp lệ' });
+                  return;
+                }
 
-              if (password.length < 6) {
-                Toast.show({
-                  type: 'error',
-                  text1: 'Mật khẩu phải có ít nhất 6 ký tự',
-                });
-                return;
-              }
+                if (password.length < 6) {
+                  Toast.show({ type: 'error', text1: 'Mật khẩu phải có ít nhất 6 ký tự' });
+                  return;
+                }
 
-              if (password !== passwordConfirm) {
-                Toast.show({
-                  type: 'error',
-                  text1: 'Mật khẩu không khớp',
-                });
-                return;
-              }
+                if (password !== passwordConfirm) {
+                  Toast.show({ type: 'error', text1: 'Mật khẩu không khớp' });
+                  return;
+                }
 
-              if (!agreePolicy) {
-                Toast.show({
-                  type: 'error',
-                  text1: 'Bạn cần đồng ý với chính sách quyền riêng tư',
-                });
-                return;
-              }
+                if (!agreePolicy) {
+                  Toast.show({ type: 'error', text1: 'Bạn cần đồng ý với chính sách quyền riêng tư' });
+                  return;
+                }
 
-              const payload = {
-                email,
-                password,
-                password_confirm: passwordConfirm,
-                user_type: userType,
-                user_timezone: userTimezone,
-              };
+                try {
+                  await axios.post('https://kmdiscova.id.vn/api/auth/register/', {
+                    email,
+                    password,
+                    password_confirm: passwordConfirm,
+                    user_type: userType,
+                    user_timezone: userTimezone,
+                  });
 
-              try {
-                const { data } = await axios.post('https://kmdiscova.id.vn/api/auth/register/', payload);
-
-                Toast.show({
-                  type: 'success',
-                  text1: 'Đăng ký thành công!',
-                });
-                router.replace('/login');
-              } catch (error) {
-                const message =
-                  error.response?.data?.message ||
-                  error.message ||
-                  'Đăng ký thất bại!';
-
-                Toast.show({
-                  type: 'error',
-                  text1: message,
-                });
-              }
-            }}
+                  Toast.show({ type: 'success', text1: 'Đăng ký thành công!' });
+                  router.replace('/login');
+                } catch (error) {
+                  const message = error.response?.data?.message || error.message || 'Đăng ký thất bại!';
+                  Toast.show({ type: 'error', text1: message });
+                }
+              }}
             >
               <Text style={styles.buttonText}>BẮT ĐẦU</Text>
             </TouchableOpacity>
@@ -324,185 +316,176 @@ const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
 export default Register;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 1,
+    padding: 10,
   },
   Welcome: {
-    fontSize: 25,
+    fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 20,
-    fontFamily: 'Helvetica Neue',
-  },
-  backButton: {
-    borderColor: '#EBEAEC',
-    borderWidth: 1,
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 60,
-    marginLeft: 20,
-  },
-  Text: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#A1A4B2',
-    textAlign: 'center',
-    marginTop: 40,
-    marginBottom: 40,
-  },
-  input: {
-    height: 70,
-    borderColor: '#EBEAEC',
-    backgroundColor: '#F2F3F7',
-    borderWidth: 1,
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    width: SCREEN_WIDTH - 70,
-    color: '#000',
-    alignSelf: 'center',
-  },
-  Button: {
-    backgroundColor: '#8E97FD',
-    borderRadius: 50,
-    paddingVertical: 25,
-    paddingHorizontal: 20,
-    marginTop: 20,
-    width: SCREEN_WIDTH - 70,
-    alignSelf: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  Text3: {
-    fontSize: 14,
-    color: '#A1A4B2',
-  },
-  terms: {
-    color: '#8E97FD',
-    fontWeight: 'bold',
-  },
-  policyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 40,
-    marginTop: 10,
-    justifyContent: 'space-between',
-  },
-
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderColor: '#A1A4B2',
-    borderRadius: 4,
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  checkboxTick: {
-    width: 12,
-    height: 12,
-    backgroundColor: '#8E97FD',
-    borderRadius: 2,
-  },
-  /* wrapper lets eye sit on top */
-  pwdWrapper: {
-    position: 'relative',
-    alignSelf: 'center',
-    width: SCREEN_WIDTH - 70,
-    marginBottom: 20,
-  },
-
-  /* reuse input style but remove marginHorizontal */
-  input2: {
-    height: 70,
-    backgroundColor: '#F2F3F7',
-    borderColor: '#EBEAEC',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    color: '#000',
-    paddingRight: 50,      // space for eye icon
-  },
-
-  eyeBtn: {
-    position: 'absolute',
-    right: 15,
-    top: 0,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userTypeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'left',
-    marginBottom: 20,
-    marginLeft: 40,
-    gap: 10,
-  },
-
-  userTypeButton: {
-    borderWidth: 1,
-    borderColor: '#A1A4B2',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#F2F3F7',
-  },
-
-  userTypeButtonActive: {
-    backgroundColor: '#8E97FD',
-    borderColor: '#8E97FD',
-  },
-
-  userTypeText: {
-    color: '#A1A4B2',
-    fontWeight: 'bold',
-  },
-
-  userTypeTextActive: {
-    color: '#fff',
-  },
-  Text12: {
-    fontSize: 14,
-    color: '#A1A4B2',
-    marginLeft: 40,
-    marginBottom: 10,
+    marginTop: 100,
+    marginBottom: 30,
+    color: '#333',
   },
   socialContainer: {
-    marginTop: 20,
-    marginBottom: 20,
-    gap: 10,
-    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 30,
   },
-
   socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1877F2', // Facebook blue
-    paddingVertical: 12,
+    backgroundColor: '#1877F2',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
     borderRadius: 10,
-    width: SCREEN_WIDTH - 70,
+    marginBottom: 15,
   },
-
   socialText: {
     color: '#fff',
-    fontWeight: 'bold',
-    marginLeft: 10,
     fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
   },
-
+  Text: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E1E5E9',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    outlineStyle: 'none',
+    ...Platform.select({
+      web: {
+        cursor: 'text',
+        userSelect: 'text',
+        WebkitUserSelect: 'text',
+        MozUserSelect: 'text',
+      },
+    }),
+  },
+  pwdWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E1E5E9',
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    backgroundColor: '#fff',
+    outlineStyle: 'none',
+  },
+  input2: {
+    flex: 1,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    fontSize: 16,
+    outlineStyle: 'none',
+    ...Platform.select({
+      web: {
+        cursor: 'text',
+        userSelect: 'text',
+        WebkitUserSelect: 'text',
+        MozUserSelect: 'text',
+      },
+    }),
+  },
+  eyeBtn: {
+    padding: 15,
+  },
+  Text12: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    color: '#333',
+  },
+  userTypeContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  userTypeButton: {
+    flex: 1,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#E1E5E9',
+    borderRadius: 10,
+    marginHorizontal: 5,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  userTypeButtonActive: {
+    backgroundColor: '#6c63ff',
+    borderColor: '#6c63ff',
+  },
+  userTypeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  userTypeTextActive: {
+    color: '#fff',
+  },
+  policyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 30,
+  },
+  Text3: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  terms: {
+    color: '#6c63ff',
+    fontWeight: '600',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#6c63ff',
+    borderRadius: 4,
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxTick: {
+    width: 10,
+    height: 10,
+    backgroundColor: '#6c63ff',
+    borderRadius: 2,
+  },
+  Button: {
+    backgroundColor: '#6c63ff',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

@@ -7,6 +7,7 @@
     "owner": "fusia",
     "icon": "./assets/images/app.png",
     "scheme": "discova",
+    "owner": "fusia", 
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -24,7 +25,8 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "webpackConfig": "./webpack.config.js"
     },
     "plugins": [
       "expo-router",

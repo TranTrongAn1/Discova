@@ -1,12 +1,20 @@
+
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Linking, Alert } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import api from '../(auth)/api';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExternalLink, Brain, Heart, Users, Baby, Lightbulb } from 'lucide-react-native';
+
+import Logo from '../../assets/images/Logo.png';
+
 
 const problemsData = [
   'Rối loạn lo âu',
@@ -132,6 +140,50 @@ const Home = () => {
   const [userName, setUserName] = useState(null); // default is null
   const [loading, setLoading] = useState(true);
   const [nextAppointment, setNextAppointment] = useState(null);
+  const [topPsychologists, setTopPsychologists] = useState([]);
+
+  // Fetch top psychologists from API
+  useEffect(() => {
+    const fetchTopPsychologists = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await api.get('/api/psychologists/marketplace/');
+        
+        if (response.data && response.data.results) {
+          // Sort by profile completeness and experience, then take top 3
+          const sorted = response.data.results
+            .sort((a, b) => {
+              // Sort by years of experience (descending)
+              const expA = a.years_of_experience || 0;
+              const expB = b.years_of_experience || 0;
+              return expB - expA;
+            })
+            .slice(0, 3)
+            .map(psychologist => ({
+              id: psychologist.user,
+              name: psychologist.full_name,
+              img: psychologist.profile_picture_url,
+              des: psychologist.biography || 'No biography available',
+              rating: 0, // Rating not available in marketplace API
+              numberOfReviews: 0, // Reviews not available in marketplace API
+              yearsOfExperience: psychologist.years_of_experience,
+              offersOnline: psychologist.offers_online_sessions,
+              offersConsultation: psychologist.offers_initial_consultation,
+              hourlyRate: psychologist.hourly_rate,
+              consultationRate: psychologist.initial_consultation_rate
+            }));
+          
+          setTopPsychologists(sorted);
+        }
+      } catch (error) {
+        console.error('Error fetching top psychologists:', error);
+      }
+    };
+
+    fetchTopPsychologists();
+  }, []);
 
   useEffect(() => {
     const fetchUpcomingAppointment = async () => {
@@ -426,10 +478,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 10,
     paddingHorizontal: 18,
-    shadowColor: '#000000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 2
+
+      },
+
+      android: {
+
+        elevation: 2,
+
+      },
+
+      web: {
+
+        boxShadow: '0 1 2px rgba(0,0,0,0000000.1)',
+
+      },
+
+    }),
     elevation: 2,
     marginVertical: 6,
     marginHorizontal: 4,
@@ -453,10 +525,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
     borderRadius: 10,
     padding: 15,
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: 5
+
+      },
+
+      android: {
+
+        elevation: 5,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 5px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 3,
   },
   cardText: {
@@ -580,10 +672,30 @@ const styles = StyleSheet.create({
     width: 180,
     height: 250,
     overflow: 'hidden',
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 4
+
+      },
+
+      android: {
+
+        elevation: 4,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 4px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 3,
     alignItems: 'center',
     justifyContent: 'center',

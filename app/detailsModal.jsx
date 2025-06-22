@@ -1,8 +1,8 @@
-import { StyleSheet, Text, View, Image, Linking, Modal, TouchableOpacity, ScrollView, Animated } from 'react-native';
-import React, { useEffect, useState, useRef } from 'react';
 import { Feather } from '@expo/vector-icons';
-import api from './(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Image, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import api from './(auth)/api';
 
 const formatTimeRange = (start, end) => {
   const startDate = new Date(start);
@@ -22,12 +22,13 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
   const [appointmentDetails, setAppointmentDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       Animated.spring(slideAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         tension: 50,
         friction: 8,
       }).start();
@@ -35,7 +36,7 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     }
   }, [visible]);
@@ -66,6 +67,14 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
     }
   }, [visible, appointment]);
 
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, []);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Scheduled': return '#4CAF50';
@@ -84,6 +93,16 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
     }
   };
 
+  const handleClose = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => {
+      onClose();
+    });
+  };
+
   if (!visible) return null;
 
   return (
@@ -91,7 +110,7 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
       visible={visible}
       transparent={true}
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
         <Animated.View 
@@ -122,7 +141,7 @@ const DetailsModal = ({ visible, appointment, onClose }) => {
               <Feather name="calendar" size={24} color="#7B68EE" />
               <Text style={styles.title}>Chi tiết cuộc hẹn</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Feather name="x" size={24} color="#666" />
             </TouchableOpacity>
           </View>
@@ -262,10 +281,30 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     maxHeight: '85%',
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: -5 },
     shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowRadius: 10
+
+      },
+
+      android: {
+
+        elevation: 10,
+
+      },
+
+      web: {
+
+        boxShadow: '0 -5 10px rgba(0,0,0,0000.25)',
+
+      },
+
+    }),
     elevation: 10,
   },
   header: {
@@ -297,10 +336,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 4
+
+      },
+
+      android: {
+
+        elevation: 4,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 4px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 3,
   },
   content: {
@@ -311,10 +370,30 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    ...Platform.select({
+
+      ios: {
+
+        shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 8
+
+      },
+
+      android: {
+
+        elevation: 8,
+
+      },
+
+      web: {
+
+        boxShadow: '0 2 8px rgba(0,0,0,0000.1)',
+
+      },
+
+    }),
     elevation: 4,
     borderWidth: 1,
     borderColor: '#f0f0f0',
