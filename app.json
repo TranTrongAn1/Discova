@@ -7,6 +7,7 @@
     "owner": "fusia",
     "icon": "./assets/images/app.png",
     "scheme": "discova",
+    "owner": "fusia",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -19,7 +20,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-       "package": "com.fusia.Discova"
+      "package": "com.huykhoi_1509.Discova"
+
     },
     "web": {
       "bundler": "metro",

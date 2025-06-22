@@ -1,14 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-  Animated,
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { checkPsychologistProfile, clearTokens } from './api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -20,34 +22,135 @@ const Welcome = () => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
-      useNativeDriver: true,
+      useNativeDriver: false, // Disable native driver for web compatibility
     }).start();
 
     Animated.timing(translateY, {
       toValue: 0,
       duration: 1000,
-      useNativeDriver: true,
+      useNativeDriver: false, // Disable native driver for web compatibility
     }).start();
   }, []);
 
   const checkUserTypeAndRedirect = async () => {
     try {
+      console.log('=== WELCOME DEBUG START ===');
+      
       const userType = await AsyncStorage.getItem('user_type');
+      const token = await AsyncStorage.getItem('access_token');
+
+      console.log('Welcome - User type:', userType);
+      console.log('Welcome - Token exists:', !!token);
+      console.log('Welcome - Token value:', token ? token.substring(0, 20) + '...' : 'null');
+
+      if (!token) {
+        console.log('No token found, redirecting to login');
+        router.replace('/login');
+        return;
+      }
+
+      // Test API call first with better error handling
+      console.log('Testing API call...');
+      try {
+        const testResponse = await fetch('https://kmdiscova.id.vn/api/auth/me/', {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('Test API response status:', testResponse.status);
+        
+        if (testResponse.status === 401) {
+          console.log('Token is invalid, clearing and redirecting to login');
+          await clearTokens();
+          router.replace('/login');
+          return;
+        } else if (testResponse.status === 200) {
+          console.log('Token is valid, proceeding with navigation');
+        }
+      } catch (apiError) {
+        console.log('Test API call failed:', apiError);
+        // If API test fails, we'll still try to proceed but log the issue
+        console.log('Proceeding despite API test failure...');
+      }
 
       if (userType === 'Parent') {
+        console.log('Parent user, redirecting to home');
         router.replace('/(parent)/home');
       } else if (userType === 'Psychologist') {
-        router.replace('/payment');
+        console.log('Psychologist user, checking payment status...');
+        
+        // Check psychologist profile and payment status
+        try {
+          const profileData = await checkPsychologistProfile();
+          
+          if (profileData) {
+            // If verification status is "Pending", redirect to payment
+            if (profileData.verification_status === 'Pending') {
+              console.log('Payment required, redirecting to payment screen');
+              router.replace('/(auth)/psychologistPayment');
+              return;
+            }
+            
+            // If verification status is "Rejected", show error
+            if (profileData.verification_status === 'Rejected') {
+              Alert.alert(
+                'Verification Rejected',
+                'Your verification has been rejected. Please contact support.',
+                [{ text: 'OK', onPress: () => router.replace('/login') }]
+              );
+              return;
+            }
+          }
+          
+          // If no profile or verification is approved, proceed to profile
+          console.log('Payment verified or no profile, redirecting to profile');
+          router.replace('/(Pychologist)/profile');
+        } catch (profileError) {
+          // If profile doesn't exist (404), redirect to payment
+          console.log('No profile found, redirecting to payment');
+          router.replace('/(auth)/psychologistPayment');
+        }
       } else {
         console.warn('Unknown user type:', userType);
+        Alert.alert('Error', 'Unknown account type. Please login again.');
+        await clearTokens();
+        router.replace('/login');
       }
+      
+      console.log('=== WELCOME DEBUG END ===');
     } catch (error) {
       console.error('Error reading user_type:', error);
+      Alert.alert('Error', 'Cannot read account information. Please login again.');
+      router.replace('/login');
     }
   };
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity 
+        style={styles.logoutButton}
+        onPress={() => {
+          Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Logout', 
+                style: 'destructive',
+                onPress: async () => {
+                  await clearTokens();
+                  router.replace('/login');
+                }
+              }
+            ]
+          );
+        }}
+      >
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+
       <Animated.View style={[styles.textWrapper, {
         opacity: fadeAnim,
         transform: [{ translateY }]
@@ -116,5 +219,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    padding: 10,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
