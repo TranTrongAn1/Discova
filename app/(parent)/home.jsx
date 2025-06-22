@@ -1,10 +1,7 @@
 
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Linking, Alert } from 'react-native';
-import React, { useEffect, useState } from 'react';
 import Logo from '../../assets/images/Logo.png';
 import psychologists from '../(Pychologist)/pyschcologists';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -13,7 +10,6 @@ import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExternalLink, Brain, Heart, Users, Baby, Lightbulb } from 'lucide-react-native';
 
-import Logo from '../../assets/images/Logo.png';
 
 
 const problemsData = [
