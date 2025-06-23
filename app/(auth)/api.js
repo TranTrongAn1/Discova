@@ -11,24 +11,11 @@ let hasRedirectedToWelcome = false; // to avoid repeated redirects
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('access_token');
-
     if (token) {
       config.headers.Authorization = `Token ${token}`;
-
-      if (!hasRedirectedToWelcome && router?.replace) {
-        hasRedirectedToWelcome = true;
-        setTimeout(() => {
-          router.replace('/welcome');
-        }, 0);
-      }
-
-    } else {
-      if (config?.meta?.requireAuth) {
-        console.warn('⚠️ No access token found');
-        router.replace('/index');
-      }
+    } else if (config?.meta?.requireAuth) {
+      console.warn('⚠️ No access token for a protected route');
     }
-
     return config;
   },
   (error) => Promise.reject(error)
