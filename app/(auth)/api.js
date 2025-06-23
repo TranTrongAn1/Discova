@@ -19,11 +19,12 @@ api.interceptors.request.use(
       if (!hasRedirectedToWelcome && router?.replace) {
         hasRedirectedToWelcome = true;
         setTimeout(() => {
-          router.replace('/welcome');
+          router.replace('/login');
         }, 0); // Delay to avoid interfering with request
       }
 
     } else {
+      router.replace('/login');
       console.warn('⚠️ No access token found');
 
       // Optional: redirect to login if no token
