@@ -19,7 +19,7 @@ api.interceptors.request.use(
       if (!hasRedirectedToWelcome && router?.replace) {
         hasRedirectedToWelcome = true;
         setTimeout(() => {
-          router.replace('/login');
+          router.replace('/welcome');
         }, 0); // Delay to avoid interfering with request
       }
 

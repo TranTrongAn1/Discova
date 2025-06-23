@@ -53,7 +53,7 @@ const Login = () => {
       });
 
       // Navigate to welcome screen
-      router.push('/welcome');
+      router.replace('/welcome');
       setLoading(false);
 
     } catch (error) {
