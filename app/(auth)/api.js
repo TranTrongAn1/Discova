@@ -15,29 +15,25 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Token ${token}`;
 
-      // Redirect to welcome only once
       if (!hasRedirectedToWelcome && router?.replace) {
         hasRedirectedToWelcome = true;
         setTimeout(() => {
           router.replace('/welcome');
-        }, 0); // Delay to avoid interfering with request
+        }, 0);
       }
 
     } else {
-      console.warn('⚠️ No access token found');
-
-      // Optional: redirect to login if no token
-      // if (!router.canGoBack?.()) {
-      //   router.replace('/login');
-      // }
+      if (config?.meta?.requireAuth) {
+        console.warn('⚠️ No access token found');
+        router.replace('/index');
+      }
     }
 
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
+
 
 export async function checkPsychologistProfile() {
   const response = await api.get('/api/psychologists/profile/profile/');
