@@ -1,12 +1,10 @@
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Linking, Alert } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import Logo from '../../assets/images/Logo.png';
-import psychologists from '../(Pychologist)/pyschcologists';
-import { router } from 'expo-router';
-import axios from 'axios';
-import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ExternalLink, Brain, Heart, Users, Baby, Lightbulb } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { Baby, Brain, ExternalLink, Heart, Lightbulb, Users } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import api from '../(auth)/api';
+import Logo from '../../assets/images/Logo.png';
 
 const problemsData = [
   'Rối loạn lo âu',
@@ -138,7 +136,7 @@ const Home = () => {
       try {
         const token = await AsyncStorage.getItem('access_token');
         if (!token) {
-          console.warn('No token found in storage.');
+          console.log('No token found, skipping appointment fetch');
           return;
         }
 
@@ -162,10 +160,10 @@ const Home = () => {
   useEffect(() => {
     const fetchUserName = async () => {
       try {
-        const token = await AsyncStorage.getItem('access_token'); // Get token from storage
-        console.log('token:', token);
+        const token = await AsyncStorage.getItem('access_token');
         if (!token) {
-          console.warn('No token found in storage.');
+          console.log('No token found, skipping user profile fetch');
+          setLoading(false);
           return;
         }
 

@@ -2,13 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-    Alert,
-    Animated,
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { checkPsychologistProfile, clearTokens } from './api';
 
@@ -35,7 +35,7 @@ const Welcome = () => {
   const checkUserTypeAndRedirect = async () => {
     try {
       console.log('=== WELCOME DEBUG START ===');
-      
+
       const userType = await AsyncStorage.getItem('user_type');
       const token = await AsyncStorage.getItem('access_token');
 
@@ -59,7 +59,7 @@ const Welcome = () => {
           }
         });
         console.log('Test API response status:', testResponse.status);
-        
+
         if (testResponse.status === 401) {
           console.log('Token is invalid, clearing and redirecting to login');
           await clearTokens();
@@ -79,11 +79,11 @@ const Welcome = () => {
         router.replace('/(parent)/home');
       } else if (userType === 'Psychologist') {
         console.log('Psychologist user, checking payment status...');
-        
+
         // Check psychologist profile and payment status
         try {
           const profileData = await checkPsychologistProfile();
-          
+
           if (profileData) {
             // If verification status is "Pending", redirect to payment
             if (profileData.verification_status === 'Pending') {
@@ -91,7 +91,7 @@ const Welcome = () => {
               router.replace('/(auth)/psychologistPayment');
               return;
             }
-            
+
             // If verification status is "Rejected", show error
             if (profileData.verification_status === 'Rejected') {
               Alert.alert(
@@ -102,7 +102,7 @@ const Welcome = () => {
               return;
             }
           }
-          
+
           // If no profile or verification is approved, proceed to profile
           console.log('Payment verified or no profile, redirecting to profile');
           router.replace('/(Pychologist)/profile');
@@ -117,7 +117,7 @@ const Welcome = () => {
         await clearTokens();
         router.replace('/login');
       }
-      
+
       console.log('=== WELCOME DEBUG END ===');
     } catch (error) {
       console.error('Error reading user_type:', error);
@@ -128,7 +128,7 @@ const Welcome = () => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.logoutButton}
         onPress={() => {
           Alert.alert(
@@ -136,8 +136,8 @@ const Welcome = () => {
             'Are you sure you want to logout?',
             [
               { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Logout', 
+              {
+                text: 'Logout',
                 style: 'destructive',
                 onPress: async () => {
                   await clearTokens();

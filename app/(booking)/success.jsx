@@ -1,12 +1,12 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import React from 'react';
-import LottieView from 'lottie-react-native';
 import { router } from 'expo-router'; // required to navigate
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import LottieAnimation from '../../components/LottieAnimation';
 
 const Success = () => {
   return (
     <View style={styles.container}>
-      <LottieView
+      <LottieAnimation
         source={require('../../assets/images/Animation - 1750083506267.json')}
         autoPlay
         loop={false}

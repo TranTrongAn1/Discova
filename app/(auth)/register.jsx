@@ -37,26 +37,44 @@ const Register = ({ onSwitch }) => {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [userType, setUserType] = useState('Parent'); // Default value
   const [userTimezone, setUserTimezone] = useState('UTC');  // Default timezone
+  // 1. Explicitly create the correct redirect URI using the Expo proxy
+  const redirectUri = AuthSession.makeRedirectUri({
+    useProxy: true,
+  });
 
-
-// For EAS builds, use your custom scheme
-const redirectUri = Constants.expoConfig?.hostUri 
-  ? 'https://auth.expo.io/@fusia/Discova'  // Development (Expo Go only)
-  : 'discova://';  // EAS builds (your deployed app)
-
-const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
-  expoClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
-  iosClientId: '973045964577-53veuk6btpi3da7h9gerl112ieoauef7.apps.googleusercontent.com', 
-  androidClientId: '973045964577-3bffk3umbtsdgm5f26ud3folptakl2sv.apps.googleusercontent.com',
-  scopes: ['profile', 'email'],
-  redirectUri,
-});
+  const [requestGoogle, responseGoogle, promptGoogle] = Google.useAuthRequest({
+    webClientId: '973045964577-fisrk4ckqb2rv7nolon0hmuk1c78ua36.apps.googleusercontent.com',
+    iosClientId: '973045964577-53veuk6btpi3da7h9gerl112ieoauef7.apps.googleusercontent.com',
+    androidClientId: '973045964577-3bffk3umbtsdgm5f26ud3folptakl2sv.apps.googleusercontent.com',
+    scopes: ['profile', 'email', 'openid'], // QUAN TRỌNG: Thêm scope 'openid'
+  });
 
   useEffect(() => {
-    if (requestGoogle) {
-      console.log("Actual redirect URI:", redirectUri);
+    // Xử lý phản hồi từ Google
+    if (responseGoogle?.type === 'success') {
+      const { id_token } = responseGoogle.params;
+
+      if (id_token) {
+        handleSocialLogin('google', id_token);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Xác thực thất bại',
+          text2: 'Không thể lấy ID token từ Google. Hãy chắc chắn bạn đã thêm scope "openid".',
+        });
+      }
+    } else if (responseGoogle?.type === 'error') {
+      console.error("Lỗi xác thực Google:", responseGoogle.error);
+      Alert.alert('Lỗi xác thực', responseGoogle.error?.message || 'Đã có lỗi xảy ra.');
     }
-  }, [requestGoogle, responseGoogle]);
+
+    // Xử lý phản hồi từ Facebook
+    if (responseFacebook?.type === 'success') {
+      const token = responseFacebook.authentication.accessToken;
+      handleSocialLogin('facebook', token);
+    }
+  }, [responseGoogle, responseFacebook]);
+
 
 
   // Facebook

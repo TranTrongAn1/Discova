@@ -15,9 +15,6 @@ const RootLayout = () => {
         <Stack.Screen name="(parent)" options={{ headerShown: false }} />
         <Stack.Screen name="(Pychologist)" options={{ headerShown: false }} />
         <Stack.Screen name="(booking)" options={{ headerShown: false }} />
-        <Stack.Screen name="(Pychologist)/calendar" options={{ headerShown: false }} />
-        <Stack.Screen name="psychologistPayment" options={{ headerShown: false }} />
-        <Stack.Screen name="payment-success" options={{ headerShown: false }} />
     </Stack>
   )
 }

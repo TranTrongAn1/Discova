@@ -87,7 +87,10 @@ const Layout = () => {
     const fetchProfile = async () => {
       try {
         const token = await AsyncStorage.getItem('access_token');
-        if (!token) return;
+        if (!token) {
+          console.log('No token found, skipping profile fetch');
+          return;
+        }
 
         const response = await api.get('/api/psychologists/profile/profile/');
         if (response.data && response.data.profile_picture_url) {
@@ -118,7 +121,11 @@ const Layout = () => {
     setNotificationsLoading(true);
     try {
       const token = await AsyncStorage.getItem('access_token');
-      if (!token) return;
+      if (!token) {
+        console.log('No token found, skipping notifications fetch');
+        setNotificationsLoading(false);
+        return;
+      }
 
       // Get upcoming appointments for notifications
       const upcomingResponse = await api.get('/api/appointments/upcoming/');

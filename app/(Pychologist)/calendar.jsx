@@ -16,6 +16,8 @@ const Calendar = () => {
   const [warningMessage, setWarningMessage] = useState('');
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [appointmentDetails, setAppointmentDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   // Add state for current week navigation
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -251,33 +253,19 @@ const Calendar = () => {
     }, 100);
   }, []);
 
+  // Fetch latest appointment details when modal opens
   // Handle appointment actions
   const handleAppointmentAction = async (appointment, action) => {
     // Get the correct appointment ID for API calls
-      const appointmentId = appointment.originalData?.appointment_id || appointment.id;
+    const appointmentId = appointment.originalData?.appointment_id || appointment.id;
 
-      switch (action) {
+    switch (action) {
       case 'view':
         setSelectedAppointment(appointment);
         setShowAppointmentDetails(true);
-          break;
-      case 'createZoom':
-        try {
-          console.log('Creating zoom link for appointment:', appointmentId);
-          const response = await api.post(`/api/appointments/${appointmentId}/start_online_session/`);
-          console.log('Zoom link response:', response);
-          if (response.status === 200) {
-            Alert.alert('Success', 'Online session started and zoom link created successfully!');
-            await fetchAppointments(); // Refresh to get the new link
-          }
-        } catch (error) {
-          console.error('Error creating zoom link:', error);
-          console.error('Error details:', error.response?.data);
-          Alert.alert('Error', 'Failed to create zoom link. Please try again.');
-        }
-          break;
+        break;
       case 'cancel':
-            Alert.alert(
+        Alert.alert(
           'Cancel Appointment',
           'Are you sure you want to mark this appointment as cancelled?',
           [
@@ -317,29 +305,22 @@ const Calendar = () => {
         );
         break;
       case 'noShow':
-            Alert.alert(
+        Alert.alert(
           'Mark as No-Show',
           'Are you sure you want to mark this appointment as no-show?',
-              [
+          [
             { text: 'No', style: 'cancel' },
-                {
+            {
               text: 'Yes',
               style: 'destructive',
               onPress: () => updateAppointmentStatus(appointmentId, 'No_Show')
             }
           ]
         );
-          break;
-        case 'openZoom':
-          if (appointment.meetingLink) {
-            openZoomLink(appointment.meetingLink);
-          } else {
-          Alert.alert('No Meeting Link', 'Zoom meeting link is not available yet. Please create it first.');
-          }
         break;
-        default:
+      default:
         break;
-      }
+    }
   };
 
   // Open zoom link
@@ -647,6 +628,30 @@ const Calendar = () => {
     setRefreshing(false);
   };
 
+  // Fetch latest appointment details when modal opens
+  useEffect(() => {
+    if (showAppointmentDetails && selectedAppointment) {
+      const fetchDetails = async () => {
+        setDetailsLoading(true);
+        try {
+          const token = await AsyncStorage.getItem('access_token');
+          const id = selectedAppointment.originalData?.appointment_id || selectedAppointment.id;
+          const res = await api.get(`/api/appointments/${id}/`, {
+            headers: { Authorization: `Token ${token}` },
+          });
+          setAppointmentDetails(res.data);
+        } catch (err) {
+          setAppointmentDetails(null);
+        } finally {
+          setDetailsLoading(false);
+        }
+      };
+      fetchDetails();
+    } else {
+      setAppointmentDetails(null);
+    }
+  }, [showAppointmentDetails, selectedAppointment]);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -866,142 +871,97 @@ const Calendar = () => {
       {showAppointmentDetails && selectedAppointment && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Professional Header */}
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleContainer}>
                 <Text style={styles.modalTitle}>Appointment Details</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedAppointment.status) }]}>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedAppointment.status) }]}> 
                   <Text style={styles.statusBadgeText}>{selectedAppointment.status}</Text>
                 </View>
               </View>
               <TouchableOpacity
                 style={styles.closeModalButton}
-                            onPress={() => {
+                onPress={() => {
                   setShowAppointmentDetails(false);
                   setSelectedAppointment(null);
-                            }}
-                          >
+                }}
+              >
                 <Text style={styles.closeModalText}>✕</Text>
-                          </TouchableOpacity>
-                      </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {/* Patient Information */}
-              <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Patient Information</Text>
-                <View style={styles.infoCard}>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Child Name</Text>
-                    <Text style={styles.infoValue}>{selectedAppointment.childName}</Text>
-                    </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Age</Text>
-                    <Text style={styles.infoValue}>{selectedAppointment.childAge} years old</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Parent/Guardian</Text>
-                    <Text style={styles.infoValue}>{selectedAppointment.parentName}</Text>
-              </View>
+              </TouchableOpacity>
             </View>
-      </View>
-
-              {/* Session Details */}
-              <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Session Details</Text>
-                <View style={styles.infoCard}>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Date & Time</Text>
-                    <Text style={styles.infoValue}>
-                      {new Date(selectedAppointment.scheduledStartTime).toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-          </Text>
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {detailsLoading ? (
+                <Text style={{ textAlign: 'center', marginVertical: 40 }}>Loading...</Text>
+              ) : appointmentDetails ? (
+                <>
+                  {/* Patient Information */}
+                  <View style={styles.infoSection}>
+                    <Text style={styles.sectionTitle}>Patient Information</Text>
+                    <View style={styles.infoCard}>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Child Name</Text>
+                        <Text style={styles.infoValue}>{appointmentDetails.child_name}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Parent/Guardian</Text>
+                        <Text style={styles.infoValue}>{appointmentDetails.parent?.full_name || appointmentDetails.parent_name}</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Time</Text>
-                    <Text style={styles.infoValue}>
-                      {formatTime(selectedAppointment.scheduledStartTime)} - {formatTime(selectedAppointment.scheduledEndTime)}
-                  </Text>
+                  {/* Session Details */}
+                  <View style={styles.infoSection}>
+                    <Text style={styles.sectionTitle}>Session Details</Text>
+                    <View style={styles.infoCard}>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Date & Time</Text>
+                        <Text style={styles.infoValue}>{formatAppointmentTime(appointmentDetails.scheduled_start_time)}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Session Type</Text>
+                        <Text style={styles.infoValue}>{appointmentDetails.session_type}</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Session Type</Text>
-                    <Text style={styles.infoValue}>{selectedAppointment.sessionType}</Text>
-                  </View>
-                </View>
-                </View>
-
-              {/* Notes Section */}
-              {selectedAppointment.notes && (
-                <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>Notes</Text>
-                  <View style={styles.notesCard}>
-                    <Text style={styles.notesText}>{selectedAppointment.notes}</Text>
-                  </View>
-                </View>
+                  {/* Notes Section */}
+                  {appointmentDetails.parent_notes && (
+                    <View style={styles.infoSection}>
+                      <Text style={styles.sectionTitle}>Notes</Text>
+                      <View style={styles.notesCard}>
+                        <Text style={styles.notesText}>{appointmentDetails.parent_notes}</Text>
+                      </View>
+                    </View>
+                  )}
+                  {/* Meeting Link Section */}
+                  {appointmentDetails.session_type === 'OnlineMeeting' && appointmentDetails.meeting_link && (
+                    <View style={styles.infoSection}>
+                      <Text style={styles.sectionTitle}>Zoom Meeting</Text>
+                      <View style={styles.linkCard}>
+                        <Text style={styles.linkText} numberOfLines={2} ellipsizeMode="tail">
+                          {appointmentDetails.meeting_link}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.primaryButton, { marginTop: 12 }]}
+                        onPress={() => openZoomLink(appointmentDetails.meeting_link)}
+                      >
+                        <Text style={styles.actionButtonText}>Join Meeting</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <Text style={{ color: '#f44336', textAlign: 'center', marginVertical: 40 }}>Could not load appointment details.</Text>
               )}
-
-                {/* Meeting Link Section */}
-              {selectedAppointment.meetingLink && (
-                <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>Meeting Link</Text>
-                  <View style={styles.linkCard}>
-                    <Text style={styles.linkText} numberOfLines={2} ellipsizeMode="tail">
-                      {selectedAppointment.meetingLink}
-                    </Text>
-                  </View>
-                  </View>
-                )}
             </ScrollView>
-
             {/* Professional Action Buttons */}
             <View style={styles.modalActions}>
               <View style={styles.actionButtonsRow}>
-                {selectedAppointment.sessionType === 'OnlineMeeting' && !selectedAppointment.meetingLink && (
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.primaryButton]}
-                    onPress={() => handleAppointmentAction(selectedAppointment, 'createZoom')}
-                  >
-                    <Text style={styles.actionButtonText}>Create Meeting Link</Text>
-                  </TouchableOpacity>
-                )}
-
-                {selectedAppointment.meetingLink && (
-                    <TouchableOpacity
-                    style={[styles.actionButton, styles.primaryButton]}
-                    onPress={() => handleAppointmentAction(selectedAppointment, 'openZoom')}
-                    >
-                    <Text style={styles.actionButtonText}>Join Meeting</Text>
-                    </TouchableOpacity>
-                  )}
-
-                {selectedAppointment.meetingLink && (
-                    <TouchableOpacity
-                    style={[styles.actionButton, styles.secondaryButton]}
-                    onPress={() => copyToClipboard(selectedAppointment.meetingLink)}
-                    >
-                    <Text style={styles.secondaryButtonText}>Copy Link</Text>
-                    </TouchableOpacity>
-                  )}
-              </View>
-
-              <View style={styles.actionButtonsRow}>
-                    <TouchableOpacity
-                  style={[styles.actionButton, styles.warningButton]}
-                  onPress={() => handleAppointmentAction(selectedAppointment, 'cancel')}
-                    >
-                  <Text style={styles.actionButtonText}>Cancel Appointment</Text>
-                    </TouchableOpacity>
-
-              <TouchableOpacity 
+                <TouchableOpacity 
                   style={[styles.actionButton, styles.dangerButton]}
                   onPress={() => handleAppointmentAction(selectedAppointment, 'noShow')}
-              >
+                >
                   <Text style={styles.actionButtonText}>Mark as No-Show</Text>
-              </TouchableOpacity>
-            </View>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>

@@ -48,12 +48,12 @@ export async function checkPsychologistProfile() {
 export async function createBasicPsychologistProfile() {
   try {
     console.log('Creating basic psychologist profile...');
-    
+
     // Get current date and add 1 year for license expiry
     const currentDate = new Date();
     const expiryDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), currentDate.getDate());
     const expiryDateString = expiryDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-    
+
     const profileData = {
       first_name: 'New',
       last_name: 'Psychologist',
@@ -65,9 +65,9 @@ export async function createBasicPsychologistProfile() {
       offers_online_sessions: true,
       office_address: 'Temporary Office Address - To be updated'
     };
-    
+
     console.log('Sending profile data:', profileData);
-    
+
     const response = await api.post('/api/psychologists/profile/', profileData);
     console.log('Basic profile created:', response.data);
     return response.data;

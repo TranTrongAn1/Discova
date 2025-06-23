@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CardField, initStripe, useConfirmPayment } from '@stripe/stripe-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -29,6 +29,11 @@ const PsychologistPayment = () => {
   const [profile, setProfile] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [cardDetails, setCardDetails] = useState();
+  const [clientSecret, setClientSecret] = useState(null);
+  const { confirmPayment } = useConfirmPayment();
+  const [result, setResult] = useState(null);
+  const [stripeInitialized, setStripeInitialized] = useState(false);
 
   useEffect(() => {
     checkVerificationAndPricing();
@@ -79,6 +84,22 @@ const PsychologistPayment = () => {
       setLoading(false);
     }
   };
+
+  // Initialize Stripe on mount
+  useEffect(() => {
+    const initializeStripe = async () => {
+      try {
+        await initStripe({
+          publishableKey: 'pk_test_51RW4q4Rq8N8jdwzZXus9YjEnUhdkk3TZIll62vHWM7CBwRaqIRnmjPDKXWx1ytsJ6RrHurL77M4yo0uMjMXVdZV400DQhwWn35',
+          merchantIdentifier: 'merchant.identifier',
+        });
+        setStripeInitialized(true);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to initialize payment system');
+      }
+    };
+    initializeStripe();
+  }, []);
 
   const handlePayment = async () => {
     try {
@@ -133,42 +154,16 @@ const PsychologistPayment = () => {
       
       setOrderId(order.order_id);
       
-      // Determine success and cancel URLs - use API domain URLs
-      const successUrl = Platform.OS === 'web' 
-        ? `${window.location.origin}/payment-success?order_id=${order.order_id}`
-        : `https://kmdiscova.id.vn/api/payments/success?order_id=${order.order_id}`;
-      
-      const cancelUrl = Platform.OS === 'web' 
-        ? `${window.location.origin}/psychologistPayment`
-        : `https://kmdiscova.id.vn/api/payments/cancel`;
-      
-      console.log('Success URL:', successUrl);
-      console.log('Cancel URL:', cancelUrl);
-      
       // Initiate payment
       const paymentResponse = await initiatePayment(
         order.order_id, 
-        successUrl, 
-        cancelUrl, 
+        'https://kmdiscova.id.vn/api/payments/success?order_id=' + order.order_id,
+        'https://kmdiscova.id.vn/api/payments/cancel',
         'stripe'
       );
       
-      console.log('Payment response:', paymentResponse);
-      
-      // Route to payment screen instead of opening Stripe checkout directly
       if (paymentResponse.payment_data?.client_secret) {
-        router.push({
-          pathname: './stripePayment',
-          params: {
-            clientSecret: paymentResponse.payment_data.client_secret,
-            PaymentIntent: paymentResponse.payment_data.payment_intent_id,
-            PaymentMethodType: paymentResponse.payment_data.payment_method_type,
-            Amount: paymentResponse.payment_data.amount,
-            Currency: paymentResponse.payment_data.currency,
-            orderId: order.order_id,
-            orderType: 'registration'
-          },
-        });
+        setClientSecret(paymentResponse.payment_data.client_secret);
       } else {
         throw new Error('No payment method available');
       }
@@ -189,6 +184,48 @@ const PsychologistPayment = () => {
       }
       
       Alert.alert('Payment Error', errorMessage);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleCardPay = async () => {
+    if (!stripeInitialized) {
+      Alert.alert('Error', 'Payment system is not ready. Please wait a moment.');
+      return;
+    }
+    if (!cardDetails?.complete) {
+      Alert.alert('Please enter complete card details');
+      return;
+    }
+    if (!clientSecret) {
+      Alert.alert('Error', 'Client secret is missing. Please try again.');
+      return;
+    }
+    setPaymentLoading(true);
+    try {
+      const { paymentIntent, error } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+        paymentMethodData: {
+          billingDetails: {
+            name: profile?.full_name || 'Psychologist',
+            email: profile?.email || '',
+          },
+        },
+      });
+      if (error) {
+        Alert.alert('Payment failed', error.message);
+      } else if (paymentIntent) {
+        setResult(paymentIntent);
+        Alert.alert('Success', 'Payment completed successfully!', [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/(Pychologist)/profile'),
+          },
+        ]);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setPaymentLoading(false);
     }
@@ -339,21 +376,42 @@ const PsychologistPayment = () => {
           </View>
         </View>
 
-        {/* Payment Button */}
-        <TouchableOpacity
-          style={[styles.paymentButton, paymentLoading && styles.paymentButtonDisabled]}
-          onPress={handlePayment}
-          disabled={paymentLoading}
-        >
-          {paymentLoading ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <>
-              <Ionicons name="card" size={20} color="white" />
-              <Text style={styles.paymentButtonText}>Pay Registration Fee</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {/* Card Input and Payment Button */}
+        {clientSecret && (
+          <>
+            <CardField
+              postalCodeEnabled={false}
+              style={{ height: 50, marginVertical: 20 }}
+              onCardChange={card => setCardDetails(card)}
+            />
+            <TouchableOpacity
+              style={[styles.paymentButton, paymentLoading && styles.paymentButtonDisabled]}
+              onPress={handleCardPay}
+              disabled={paymentLoading || !cardDetails?.complete}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.paymentButtonText}>
+                {paymentLoading ? 'Processing...' : 'Complete Payment'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {!clientSecret && (
+          <TouchableOpacity
+            style={[styles.paymentButton, paymentLoading && styles.paymentButtonDisabled]}
+            onPress={handlePayment}
+            disabled={paymentLoading}
+          >
+            {paymentLoading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="card" size={20} color="white" />
+                <Text style={styles.paymentButtonText}>Pay Registration Fee</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* Check Payment Status */}
         {orderId && (

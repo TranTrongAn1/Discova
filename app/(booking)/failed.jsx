@@ -1,13 +1,11 @@
-import { StyleSheet, Text, View, Image } from 'react-native';
+import { router } from 'expo-router';
 import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const Failed = () => {
   return (
     <View style={styles.container}>
-      <Image
-
-        style={styles.image}
-      />
+      <Text style={styles.emoji}>❌</Text>
       <Text style={styles.title}>Thanh toán thất bại</Text>
       <Text style={styles.message}>
         Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại hoặc kiểm tra kết nối mạng.
@@ -29,9 +27,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  image: {
-    width: 120,
-    height: 120,
+  emoji: {
+    fontSize: 80,
     marginBottom: 25,
   },
   title: {
