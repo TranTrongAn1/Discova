@@ -54,10 +54,15 @@ export async function createBasicPsychologistProfile() {
     const expiryDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), currentDate.getDate());
     const expiryDateString = expiryDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
 
+    // Generate a unique license number using timestamp and random component
+    const timestamp = Date.now();
+    const randomComponent = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const uniqueLicenseNumber = `TEMP-${timestamp}-${randomComponent}`;
+
     const profileData = {
       first_name: 'New',
       last_name: 'Psychologist',
-      license_number: 'TEMP-LICENSE-001',
+      license_number: uniqueLicenseNumber,
       license_issuing_authority: 'Temporary Authority',
       license_expiry_date: expiryDateString,
       years_of_experience: 1,
