@@ -1,10 +1,17 @@
-import { router,useLocalSearchParams} from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert,
+    Alert,
+    ScrollView,
+    StyleSheet, Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import api from '../(auth)/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Inside your component
 
@@ -184,6 +191,27 @@ const BookingPage = () => {
           fetchProfile();
         }, [mode]);
 
+        useEffect(() => {
+          // Fetch parent info for autofill
+          const fetchParentInfo = async () => {
+            try {
+              const token = await AsyncStorage.getItem('access_token');
+              if (!token) return;
+              const res = await api.get('api/parents/profile/profile/', {
+                headers: { Authorization: `Token ${token}` },
+              });
+              if (res.data) {
+                setName((res.data.first_name || '') + (res.data.last_name ? ' ' + res.data.last_name : ''));
+                setPhone(res.data.phone_number || '');
+                setEmail(res.data.email || '');
+              }
+            } catch (err) {
+              console.error('Failed to fetch parent info:', err);
+            }
+          };
+          fetchParentInfo();
+        }, []);
+
         const toggleSlot = (slot) => {
           setSelectedSlots((prev) => {
             const newSelected = { ...prev };
@@ -243,196 +271,198 @@ const BookingPage = () => {
 
 
 return (
-  <ScrollView style={styles.container}>
-    <Text style={styles.title}>Bạn muốn tư vấn vào khung giờ nào?</Text>
-
-    {typeof availableSlots === 'string' && availableSlots === 'error' ? (
-      <Text style={{ color: 'red' }}>Đã xảy ra lỗi khi tải khung giờ. Vui lòng thử lại sau.</Text>
-    ) : !availableSlots || Object.keys(availableSlots).length === 0 ? (
-      <Text style={{ color: '#666' }}>Chuyên gia này hiện chưa có khung giờ khả dụng.</Text>
-    ) : (
-      Object.entries(availableSlots).map(([day, slots]) => {
-        // Here is where you define dayLabel:
-        const [year, month, date] = day.split('-').map(Number);
-        const dateObj = new Date(year, month - 1, date); // Avoids ISO timezone issues
-        const dayLabel = new Intl.DateTimeFormat('vi-VN', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'numeric',
-        }).format(dateObj);
-
-
-        return (
-          <View key={day} style={styles.dayBlock}>
-            <Text style={styles.dayLabel}>{dayLabel}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {Array.isArray(slots) &&
-                slots.map((slot) => {
-                  const key = `${day}-${slot.timeRange}`;
-                  const isSelected = selectedSlots[key];
-                  return (
-                  <TouchableOpacity
-                    key={slot.slot_id}
-                    style={[styles.slot, selectedSlots[slot.slot_id] && styles.slotSelected]}
-                    onPress={() => toggleSlot(slot)}
-                  >
-                    <Text style={[styles.slotText, selectedSlots[slot.slot_id] && { color: '#fff' }]}>
-                      {slot.timeRange}
-                    </Text>
-                  </TouchableOpacity>
-
-                  );
-                })}
-            </ScrollView>
-          </View>
-        );
-      })
-    )}
-
-    <Text style={styles.title}>Bạn có yêu cầu hình thức tư vấn đặc biệt nào không?</Text>
-    <TextInput
-      style={styles.input}
-      placeholder="Mô tả yêu cầu đặc biệt..."
-      placeholderTextColor="#999"
-      value={specialRequest}
-      onChangeText={setSpecialRequest}
-    />
-
-    <Text style={styles.title}>Thông tin cá nhân</Text>
-    <TextInput
-    
-      style={[styles.input, nameError ? styles.inputError : null]}
-      placeholder="Họ và tên của bạn"
-      placeholderTextColor="#999"
-      value={name}
-      onChangeText={handleNameChange}
-    />
-    {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
-    <TextInput
-      style={[styles.input, phoneError ? styles.inputError : null]}
-      placeholder="Số điện thoại của bạn"
-      placeholderTextColor="#999"
-      value={phone}
-      keyboardType="phone-pad"
-      onChangeText={handlePhoneChange}
-    />
-    {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
-    <TextInput
-      style={[styles.input, emailError ? styles.inputError : null]}
-      placeholder="Email của bạn"
-      placeholderTextColor="#999"
-      value={email}
-      keyboardType="email-address"
-      onChangeText={handleEmailChange}
-    />
- {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-    <Text style={styles.title}>Bạn có muốn nhận thông báo về lịch hẹn qua email không?</Text>
-    <View style={styles.columnOptions}>
-      {['Có', 'Không'].map((option) => (
-        <TouchableOpacity
-          key={option}
-          style={[styles.notifyOption, notify === option && styles.notifySelected]}
-          onPress={() => setNotify(option)}
-        >
-          <Text style={{ color: notify === option ? '#fff' : '#000' }}>{option}</Text>
+  <LinearGradient
+    colors={["#f3e9ff", "#e9e4fc", "#f8f6ff"]}
+    style={styles.gradientBg}
+  >
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.card}>
+        <Text style={styles.title}>Select a time slot for your consultation</Text>
+        {typeof availableSlots === 'string' && availableSlots === 'error' ? (
+          <Text style={styles.errorText}>An error occurred while loading slots. Please try again later.</Text>
+        ) : !availableSlots || Object.keys(availableSlots).length === 0 ? (
+          <Text style={styles.emptyText}>This psychologist currently has no available slots.</Text>
+        ) : (
+          Object.entries(availableSlots).map(([day, slots]) => {
+            const [year, month, date] = day.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, date);
+            const dayLabel = new Intl.DateTimeFormat('en-US', {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'numeric',
+            }).format(dateObj);
+            return (
+              <View key={day} style={styles.dayBlock}>
+                <View style={styles.dayLabelRow}>
+                  <Ionicons name="calendar" size={16} color="#8e6be8" style={{ marginRight: 6 }} />
+                  <Text style={styles.dayLabel}>{dayLabel}</Text>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                  {Array.isArray(slots) &&
+                    slots.map((slot) => {
+                      const key = `${day}-${slot.timeRange}`;
+                      return (
+                        <TouchableOpacity
+                          key={slot.slot_id}
+                          style={[styles.slot, selectedSlots[slot.slot_id] && styles.slotSelected]}
+                          onPress={() => toggleSlot(slot)}
+                        >
+                          <Ionicons name="time" size={14} color={selectedSlots[slot.slot_id] ? '#fff' : '#8e6be8'} style={{ marginRight: 2 }} />
+                          <Text style={[styles.slotText, selectedSlots[slot.slot_id] && { color: '#fff' }]}> {slot.timeRange} </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                </ScrollView>
+              </View>
+            );
+          })
+        )}
+        <Text style={styles.title}>Personal Information</Text>
+        <TextInput
+          style={[styles.input, nameError ? styles.inputError : null]}
+          placeholder="Your full name"
+          placeholderTextColor="#b39ddb"
+          value={name}
+          onChangeText={handleNameChange}
+        />
+        {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+        <TextInput
+          style={[styles.input, phoneError ? styles.inputError : null]}
+          placeholder="Your phone number"
+          placeholderTextColor="#b39ddb"
+          value={phone}
+          keyboardType="phone-pad"
+          onChangeText={handlePhoneChange}
+        />
+        {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+        <TextInput
+          style={[styles.input, emailError ? styles.inputError : null]}
+          placeholder="Your email"
+          placeholderTextColor="#b39ddb"
+          value={email}
+          keyboardType="email-address"
+          onChangeText={handleEmailChange}
+        />
+        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+          <Text style={styles.submitText}>Continue to Payment</Text>
         </TouchableOpacity>
-      ))}
-    </View>
-
-    <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-      <Text style={styles.submitText}>Đến trang thanh toán</Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity onPress={router.back}>
-      <Text style={styles.backText}>QUAY LẠI</Text>
-    </TouchableOpacity>
-  </ScrollView>
+        <TouchableOpacity onPress={router.back}>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  </LinearGradient>
 );
 };
 
 export default BookingPage;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#fff',
-    paddingTop: 50, // Adjust for status bar height
+  gradientBg: {
     flex: 1,
+  },
+  scrollContent: {
+    padding: 0,
+    minHeight: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 40,
+    marginBottom: 40,
+    marginHorizontal: 12,
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    width: '100%',
+    maxWidth: 480,
   },
   title: {
     fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 16,
     marginTop: 16,
     marginBottom: 8,
+    color: '#6c5ce7',
   },
   dayBlock: {
     marginBottom: 16,
   },
+  dayLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   dayLabel: {
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#444',
+    color: '#8e6be8',
+    fontSize: 15,
   },
   horizontalScroll: {
     paddingVertical: 4,
   },
   slot: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    borderColor: '#b39ddb',
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     marginRight: 8,
+    backgroundColor: '#f3e9ff',
   },
   slotSelected: {
-    backgroundColor: '#a78bfa',
-    borderColor: '#a78bfa',
+    backgroundColor: '#8e6be8',
+    borderColor: '#8e6be8',
   },
   slotText: {
-    fontSize: 13,
-    color: '#333',
+    fontSize: 14,
+    color: '#6c5ce7',
+    fontWeight: '500',
   },
   columnOptions: {
     marginVertical: 12,
   },
-  methodOption: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    backgroundColor: '#f9f9f9',
-  },
-  selectedMethod: {
-    backgroundColor: '#e0e7ff',
-    borderColor: '#a78bfa',
-  },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    padding: 10,
+    borderColor: '#b39ddb',
+    borderRadius: 14,
+    padding: 12,
     marginBottom: 10,
+    backgroundColor: '#f8f6ff',
+    color: '#6c5ce7',
+    fontWeight: '500',
   },
   notifyOption: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
+    borderColor: '#b39ddb',
+    borderRadius: 14,
     padding: 12,
     marginBottom: 8,
-    backgroundColor: '#eee',
+    backgroundColor: '#f3e9ff',
     alignItems: 'center',
   },
   notifySelected: {
-    backgroundColor: '#a78bfa',
-    borderColor: '#a78bfa',
+    backgroundColor: '#8e6be8',
+    borderColor: '#8e6be8',
   },
   submitBtn: {
-    backgroundColor: '#a78bfa',
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: '#8e6be8',
+    paddingVertical: 16,
+    borderRadius: 24,
     marginTop: 20,
     alignItems: 'center',
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   submitText: {
     color: '#fff',
@@ -441,20 +471,27 @@ const styles = StyleSheet.create({
   },
   backText: {
     textAlign: 'center',
-    color: '#999',
+    color: '#8e6be8',
     marginTop: 14,
     textTransform: 'uppercase',
-    marginBottom: 70,
+    marginBottom: 30,
+    fontWeight: 'bold',
   },
-    inputError: {
+  inputError: {
     borderColor: '#ff4444',
     borderWidth: 1,
   },
   errorText: {
     color: '#ff4444',
-    fontSize: 12,
+    fontSize: 13,
     marginTop: -8,
     marginBottom: 8,
     marginLeft: 4,
+  },
+  emptyText: {
+    color: '#b39ddb',
+    fontSize: 15,
+    textAlign: 'center',
+    marginVertical: 20,
   },
 });

@@ -1,16 +1,16 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList } from 'react-native';
-import React, { use, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useState } from 'react';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import api from '../../(auth)/api';
 const Profile = () => {
   const [userInfo, setUserInfo] = useState(null);
   const profileImage = null; // Replace this with your image URL or null
   const settingsOptions = [
-    { label: 'Thông tin cơ bản', route: 'info' },
-    { label: 'Hồ sơ của bé', route: 'childRecord' },
-    { label: 'Thông tin đặt lịch', route: 'bookingInfo' },
+    { label: 'Basic Information', route: 'info' },
+    { label: 'Child Profile', route: 'childRecord' },
+    { label: 'Booking Information', route: 'bookingInfo' },
   ];
   useFocusEffect(
     React.useCallback(() => {
@@ -51,6 +51,11 @@ const Profile = () => {
     }, [])
   );
 
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('access_token');
+    router.replace('/(auth)/login'); // Adjust path if your login screen is elsewhere
+  };
+
 
   if (!userInfo) {
     return (
@@ -61,36 +66,65 @@ const Profile = () => {
   }
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Hồ Sơ</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profile</Text>
+      </View>
 
-      <Image
-        style={styles.image}
-        resizeMode="cover"
-        source={
-          userInfo.img
-            ? { uri: userInfo.img }
-            : require('../../../assets/images/default-profile.png')
-        }
-      />
-      <Text style={styles.username}>
-        {userInfo.first_name} {userInfo.last_name}
-      </Text>
-      <Text style={styles.mail}>{userInfo.email}</Text>
-      <FlatList
-        data={settingsOptions}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.listItem}
-            onPress={() => router.push(`/${item.route}`)} // Navigate to the screen
-            activeOpacity={0.6}
-          >
-            <Text style={styles.listText}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={20} color="#A0A0A0" />
-          </TouchableOpacity>
-        )}
-      />
+      {/* Profile Section */}
+      <View style={styles.profileSection}>
+        <View style={styles.profileImageContainer}>
+          <Image
+            style={styles.profileImage}
+            resizeMode="cover"
+            source={
+              userInfo.img
+                ? { uri: userInfo.img }
+                : require('../../../assets/images/default-profile.png')
+            }
+          />
+        </View>
+        
+        <View style={styles.profileInfo}>
+          <Text style={styles.profileName}>
+            {userInfo.first_name} {userInfo.last_name}
+          </Text>
+          <Text style={styles.profileEmail}>{userInfo.email}</Text>
+        </View>
+      </View>
 
+      {/* Menu Options */}
+      <View style={styles.menuContainer}>
+        <FlatList
+          data={settingsOptions}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push(`/${item.route}`)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemText}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={20} color="#6c63ff" />
+              </View>
+            </TouchableOpacity>
+          )}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+
+      {/* Logout Button */}
+      <View style={styles.logoutContainer}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#fff" style={styles.logoutIcon} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -100,50 +134,133 @@ export default Profile;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fafafa',
+  },
+  header: {
+    backgroundColor: '#fff',
     paddingTop: 50,
-
-  },
-  text: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    marginLeft: 20,
-  },
-  image: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#eee', // fallback background if image fails to load
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  username: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  mail: {
-    fontSize: 16,
-    color: '#71727A',
-    textAlign: 'center',
-    marginTop: 5,
-  },
-  listItem: {
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+  profileSection: {
+    backgroundColor: '#fff',
+    marginHorizontal: 24,
+    marginTop: 24,
+    marginBottom: 24,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#e8eaff',
+    backgroundColor: '#f8f9ff',
+  },
+  profileInfo: {
+    alignItems: 'center',
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 8,
+  },
+  profileEmail: {
+    fontSize: 16,
+    color: '#718096',
+    textAlign: 'center',
+  },
+  menuContainer: {
+    flex: 1,
+    marginHorizontal: 24,
+  },
+  menuItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  menuItemContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
   },
-  listText: {
+  menuItemText: {
     fontSize: 16,
-    color: '#333',
-    marginLeft: 10,
+    fontWeight: '600',
+    color: '#4a5568',
   },
-
+  logoutContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  logoutButton: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#ef4444',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logoutIcon: {
+    marginRight: 8,
+  },
+  logoutText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
 });

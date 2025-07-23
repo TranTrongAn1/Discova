@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, Alert, TouchableOpacity } from 'react-native';
-import { CardField, useConfirmPayment, initStripe } from '@stripe/stripe-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { CardField, initStripe, useConfirmPayment } from '@stripe/stripe-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const StripePaymentScreen = () => {
   // Receive the parameters exactly as sent from ConfirmPage
@@ -105,41 +107,49 @@ const StripePaymentScreen = () => {
   };
 
   return (
-<View style={styles.container}>
-      {/* Header with summary + amount */}
-      <View style={styles.headerRow}>
-        <Text style={styles.summaryTitle}>Summary</Text>
-        <Text style={styles.amount}>Total: {Amount} {Currency}</Text>
+  <LinearGradient
+    colors={["#f3e9ff", "#e9e4fc", "#f8f6ff"]}
+    style={styles.gradientBg}
+  >
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.title}>Complete Your Payment</Text>
+      <View style={styles.card}>
+        <View style={styles.headerRow}>
+          <Text style={styles.summaryTitle}>Booking Summary</Text>
+          <Text style={styles.amount}>{Amount} {Currency}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoBlock}>
+          <Ionicons name="person-outline" size={16} color="#8e6be8" style={{ marginRight: 6 }} />
+          <Text style={styles.label}>Psychologist: </Text>
+          <Text style={styles.value}>{psychologist_name}</Text>
+        </View>
+        <View style={styles.infoBlock}>
+          <Ionicons name="desktop-outline" size={16} color="#8e6be8" style={{ marginRight: 6 }} />
+          <Text style={styles.label}>Service: </Text>
+          <Text style={styles.value}>{session_type === 'OnlineMeeting' ? 'Online' : 'In-person'}</Text>
+        </View>
+        <View style={styles.infoBlock}>
+          <Ionicons name="calendar-outline" size={16} color="#8e6be8" style={{ marginRight: 6 }} />
+          <Text style={styles.label}>Date: </Text>
+          <Text style={styles.value}>{date}</Text>
+        </View>
+        <View style={styles.infoBlock}>
+          <Ionicons name="time-outline" size={16} color="#8e6be8" style={{ marginRight: 6 }} />
+          <Text style={styles.label}>Time: </Text>
+          <Text style={styles.value}>{time}</Text>
+        </View>
       </View>
-
-      {/* Order Detail Box */}
-      <View style={styles.summaryBox}>
-        <Text style={styles.label}>Tên bác sĩ tâm lý:</Text>
-        <Text style={styles.value}>{psychologist_name}</Text>
-
-        <Text style={styles.label}>Tên người hẹn:</Text>
-        <Text style={styles.value}>{booking_name}</Text>
-
-        <Text style={styles.label}>Hình thức tư vấn:</Text>
-        <Text style={styles.value}>{session_type}</Text>
-
-        <Text style={styles.label}>Thời gian:</Text>
-        <Text style={styles.value}>{date},{time}</Text>
-
-        <Text style={styles.label}>Ghi chú:</Text>
-        <Text style={styles.value}>{parent_notes || '—'}</Text>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Enter Card Details</Text>
+        <CardField
+          postalCodeEnabled={false}
+          placeholder={{ number: '4242 4242 4242 4242' }}
+          cardStyle={styles.cardInput}
+          style={styles.cardContainer}
+          onCardChange={card => setCardDetails(card)}
+        />
       </View>
-
-      {/* Card Input */}
-      <CardField
-        postalCodeEnabled={false}
-        placeholder={{ number: '4242 4242 4242 4242' }}
-        cardStyle={styles.card}
-        style={styles.cardContainer}
-        onCardChange={card => setCardDetails(card)}
-      />
-
-      {/* Payment Button */}
       <TouchableOpacity
         style={[styles.button, (loading || !cardDetails?.complete) && styles.disabled]}
         onPress={handlePayPress}
@@ -147,102 +157,133 @@ const StripePaymentScreen = () => {
         activeOpacity={0.8}
       >
         <Text style={styles.buttonText}>
-          {loading ? 'Processing...' : 'Complete Order'}
+          {loading ? 'Processing...' : `Pay ${Amount} ${Currency}`}
         </Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.push('/bookingPage')}
-      >
-        <Text style={styles.backButtonText}>← Quay về trang chỉnh sửa thông tin</Text>
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Text style={styles.backButtonText}>Back to Confirmation</Text>
       </TouchableOpacity>
-      {/* Success Info
-      {result && (
-        <View style={styles.success}>
-          <Text style={styles.successText}>✅ Payment Successful!</Text>
-          <Text>Payment Intent ID: {result.id}</Text>
-          <Text>Status: {result.status}</Text>
-        </View>
-      )} */}
-    </View>
+    </ScrollView>
+  </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingTop: 100,
-    backgroundColor: '#fff',
+  gradientBg: {
     flex: 1,
+  },
+  scrollContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontWeight: 'bold',
+    fontSize: 22,
+    color: '#6c5ce7',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    width: '100%',
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8E97FD',
-  },
-  amount: {
-    fontSize: 25,
-    fontWeight: '700',
-    color: '#8E97FD',
-  },
-  summaryBox: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-    backgroundColor: '#f9f9f9',
-  },
-  label: {
-    fontSize: 13,
-    color: '#555',
-    marginTop: 8,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#000',
-  },
-  cardContainer: {
-    height: 50,
-    marginVertical: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    textColor: '#000',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 6,
-  },
-  button: {
-    marginTop: 20,
-    backgroundColor: '#8E97FD',
-    paddingVertical: 15,
-    borderRadius: 10,
     alignItems: 'center',
     marginBottom: 10,
   },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8e6be8',
+  },
+  amount: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#6c5ce7',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#ede7fa',
+    marginVertical: 12,
+  },
+  infoBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  label: {
+    fontSize: 15,
+    color: '#7c6bb3',
+    fontWeight: '500',
+  },
+  value: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#6e6592',
+    flex: 1,
+    textAlign: 'right',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8e6be8',
+    marginBottom: 12,
+  },
+  cardContainer: {
+    height: 50,
+    marginVertical: 10,
+  },
+  cardInput: {
+    backgroundColor: '#f8f6ff',
+    textColor: '#444444',
+    borderColor: '#b39ddb',
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  button: {
+    backgroundColor: '#8e6be8',
+    paddingVertical: 16,
+    borderRadius: 24,
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   disabled: {
     opacity: 0.6,
+    backgroundColor: '#b39ddb',
   },
   buttonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   backButton: {
     alignItems: 'center',
     padding: 10,
+    marginTop: 15,
   },
   backButtonText: {
-    marginTop: 20,
-    color: '#8E97FD',
+    color: '#8e6be8',
     fontSize: 15,
+    fontWeight: 'bold',
   },
 });
 

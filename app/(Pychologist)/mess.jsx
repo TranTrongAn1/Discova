@@ -1,16 +1,12 @@
-import { StyleSheet, Text, View, Image } from 'react-native';
 import React from 'react';
-import comming from '../../assets/images/CommingSoon.png'
+import { StyleSheet, Text, View } from 'react-native';
+
 const Mess = () => {
   return (
     <View style={styles.container}>
-      <Image
-        source={comming}
-        style={styles.image}
-      />
-      <Text style={styles.title}>Tính năng sắp ra mắt!</Text>
-      <Text style={styles.subtitle}>
-        Tính năng này đang được phát triển. Hãy quay lại sau nhé!
+      <Text style={styles.title}>Messages</Text>
+      <Text style={styles.message}>
+        This feature is under development. Please come back later!
       </Text>
     </View>
   );

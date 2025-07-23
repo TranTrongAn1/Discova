@@ -1,14 +1,14 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import api from '../../(auth)/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 // Get the current week's dates (Monday to Sunday)
 const getCurrentWeek = () => {
   const today = new Date();
@@ -88,67 +88,82 @@ console.log('Appointments for selected date:', appointments);
 
   return (
     <View style={styles.container}>
-      {/* Weekday Header */}
-      <View style={styles.weekRow}>
-        {week.map((d) => (
-          <TouchableOpacity
-            key={d.key}
-            onPress={() => setSelectedDateKey(d.key)}
-            style={[
-              styles.dateBox,
-              selectedDateKey === d.key && styles.selectedDateBox,
-            ]}
-          >
-            <Text
-              style={[
-                styles.dayLabel,
-                selectedDateKey === d.key && styles.selectedText,
-              ]}
-            >
-              {d.dayName}
-            </Text>
-            <Text
-              style={[
-                styles.dateLabel,
-                selectedDateKey === d.key && styles.selectedText,
-              ]}
-            >
-              {d.dateNum}
-            </Text>
-            {d.isToday && <View style={styles.dot} />}
-          </TouchableOpacity>
-        ))}
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Appointments</Text>
       </View>
 
-      {/* Schedule Label */}
-      <Text style={styles.scheduleTitle}>Schedule</Text>
+      {/* Calendar Section */}
+      <View style={styles.calendarSection}>
+        <View style={styles.weekRow}>
+          {week.map((d) => (
+            <TouchableOpacity
+              key={d.key}
+              onPress={() => setSelectedDateKey(d.key)}
+              style={[
+                styles.dateBox,
+                selectedDateKey === d.key && styles.selectedDateBox,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dayLabel,
+                  selectedDateKey === d.key && styles.selectedText,
+                ]}
+              >
+                {d.dayName}
+              </Text>
+              <Text
+                style={[
+                  styles.dateLabel,
+                  selectedDateKey === d.key && styles.selectedText,
+                ]}
+              >
+                {d.dateNum}
+              </Text>
+              {d.isToday && <View style={styles.dot} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
-      {/* Scrollable Time Column */}
-      <ScrollView contentContainerStyle={styles.scrollArea}>
-        {hours.map((hour) => {
-          const appt = appointments.find((a) => a.startHour === hour);
-          const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
+      {/* Schedule Section */}
+      <View style={styles.scheduleSection}>
+        <Text style={styles.scheduleTitle}>Schedule</Text>
 
-          return (
-            <View key={hour} style={styles.timeSlot}>
-              <Text style={styles.timeText}>{timeLabel}</Text>
+        <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+          {hours.map((hour) => {
+            const appt = appointments.find((a) => a.startHour === hour);
+            const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
 
-              {appt ? (
-                <View style={styles.appointmentCard}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>{appt.title}</Text>
-                    <Text style={styles.cardTime}>
-                      {appt.startHour}:00 - {appt.endHour}:00
-                    </Text>
+            return (
+              <View key={hour} style={styles.timeSlot}>
+                <Text style={styles.timeText}>{timeLabel}</Text>
+
+                {appt ? (
+                  <View style={styles.appointmentCard}>
+                    <View style={styles.appointmentContent}>
+                      <Text style={styles.cardTitle}>{appt.title}</Text>
+                      <Text style={styles.cardTime}>
+                        {appt.startHour}:00 - {appt.endHour}:00
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ) : (
-                <View style={styles.emptyLine} />
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
+                ) : (
+                  <View style={styles.emptyLine} />
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -158,99 +173,173 @@ export default BookingInfo;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: '#fafafa',
+  },
+  header: {
     backgroundColor: '#fff',
+    paddingTop: 50,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  backButton: {
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f8f9ff',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#e8eaff',
+  },
+  backButtonText: {
+    fontSize: 15,
+    color: '#6c63ff',
+    fontWeight: '600',
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 8,
+  },
+  calendarSection: {
+    backgroundColor: '#fff',
+    marginHorizontal: 24,
+    marginTop: 24,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
+    paddingVertical: 8,
   },
   dateBox: {
     alignItems: 'center',
-    padding: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    minWidth: 50,
   },
   selectedDateBox: {
-    backgroundColor: '#ffe6e6',
-    borderRadius: 12,
+    backgroundColor: '#e8eaff',
+    borderWidth: 1,
+    borderColor: '#6c63ff',
   },
   dayLabel: {
     fontSize: 12,
-    color: '#888',
+    color: '#718096',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   dateLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#2d3748',
   },
   selectedText: {
-    color: '#e33',
+    color: '#6c63ff',
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#e33',
-    marginTop: 2,
+    backgroundColor: '#6c63ff',
+    marginTop: 4,
+  },
+  scheduleSection: {
+    flex: 1,
+    backgroundColor: '#fff',
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   scheduleTitle: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#222',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 20,
   },
   scrollArea: {
-    paddingBottom: 100,
-    paddingHorizontal: 20,
+    flex: 1,
   },
   timeSlot: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 25,
+    marginBottom: 20,
   },
   timeText: {
     width: 60,
-    fontSize: 13,
-    color: '#888',
+    fontSize: 14,
+    color: '#718096',
+    fontWeight: '600',
   },
   emptyLine: {
     flex: 1,
     height: 40,
     borderBottomWidth: 1,
-    borderColor: '#eee',
-    marginLeft: 10,
+    borderColor: '#f0f0f0',
+    marginLeft: 12,
   },
   appointmentCard: {
     flex: 1,
-    backgroundColor: '#f2547d',
-    padding: 12,
-    borderRadius: 16,
-    marginLeft: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: '#6c63ff',
+    padding: 16,
+    borderRadius: 12,
+    marginLeft: 12,
+    shadowColor: '#6c63ff',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  appointmentContent: {
+    flex: 1,
   },
   cardTitle: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   cardTime: {
     color: '#fff',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  avatars: {
-    flexDirection: 'row',
-    marginLeft: 10,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#fff',
+    fontSize: 13,
+    opacity: 0.9,
   },
 });

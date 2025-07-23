@@ -1,19 +1,20 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import React from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams } from 'expo-router';
+import React from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import api from '../(auth)/api';
-// import { PaymentIntent } from '@stripe/stripe-react-native';
+
 const ConfirmPage = () => {
   const { data } = useLocalSearchParams();
-  const bookingData = JSON.parse(data); // ✅ Real booking data passed from BookingPage
-  console.log('Child ID:', bookingData.childId);
+  const bookingData = JSON.parse(data);
+
   const handleConfirmBooking = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      const user_id = await AsyncStorage.getItem('user_id');
       if (!token) {
-        Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập.');
+        Alert.alert('Error', 'Login token not found.');
         return;
       }
       const createOrderResponse = await api.post(
@@ -34,13 +35,12 @@ const ConfirmPage = () => {
           },
         }
       );
-      console.log("session1123: ", data )
       const paymentResponse = await api.post(
         `/api/payments/orders/${createOrderResponse.data.order.order_id}/initiate_payment/`,
         {
           success_url: 'http://localhost:8081/success',
           cancel_url: 'http://localhost:8081/failed',
-        }, // some APIs might need a body, if not, keep it empty
+        },
         {
           headers: {
             Authorization: `Token ${token}`,
@@ -49,7 +49,6 @@ const ConfirmPage = () => {
         }
       );
       const clientSecret = paymentResponse.data.payment_data.client_secret;
-      // Step 3: Navigate to Stripe payment screen
       router.push({
         pathname: './payment1',
         params: {
@@ -61,131 +60,176 @@ const ConfirmPage = () => {
           bookingData: JSON.stringify(bookingData),
         },
       });
-
     } catch (error) {
       console.error('Booking failed:', error.response?.data || error.message || error);
-      Alert.alert('Lỗi', 'Không thể đặt lịch. Vui lòng thử lại sau.');
+      Alert.alert('Error', 'Could not book. Please try again later.');
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Xác nhận thông tin lịch hẹn</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.label}><Text style={styles.bold}>Chuyên gia: </Text>{bookingData.psychologist_name || 'N/A'}</Text>
-        <Text style={styles.label}><Text style={styles.bold}>Dịch vụ: </Text>{bookingData.session_type == 'OnlineMeeting' ? 'Tư vấn online' : 'Tư vấn trực tiếp'}</Text>
-        <Text style={styles.label}><Text style={styles.bold}>Thời gian: </Text>{bookingData.slotDetails?.timeRange} ngày {bookingData.slotDetails?.date}</Text>
-        <Text style={styles.label}><Text style={styles.bold}>Thông tin người hẹn:</Text></Text>
-        <Text style={styles.subLabel}>Họ và Tên: {bookingData.name}</Text>
-        <Text style={styles.subLabel}>Số điện thoại: {bookingData.phone}</Text>
-        <Text style={styles.subLabel}>Email: {bookingData.email}</Text>
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.notes}>
-        <Text style={styles.bold}>Ghi chú của người hẹn</Text>
-        <Text style={styles.noteText}>{bookingData.parent_notes || 'Không có'}</Text>
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.pricing}>
-        <Text style={styles.bold}>Phí dịch vụ</Text>
-        <Text style={styles.bold}>
-          {bookingData.session_type === 'OnlineMeeting' ? '599.000đ' : '799.000đ'}/1 tiếng
-        </Text>
-      </View>
-      <View style={styles.pricing}>
-        <Text style={styles.bold}>Thành tiền</Text>
-        <Text style={styles.bold}>
-          {bookingData.session_type === 'OnlineMeeting' ? '599.000đ' : '799.000đ'}
-        </Text>
-      </View>
-
-      <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmBooking}>
-        <Text style={styles.confirmText}>XÁC NHẬN & THANH TOÁN</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.backButton} onPress={router.back}>
-        <Text style={styles.backText}>QUAY LẠI</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    <LinearGradient
+      colors={["#f3e9ff", "#e9e4fc", "#f8f6ff"]}
+      style={styles.gradientBg}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.title}>Confirm Your Booking</Text>
+        <View style={styles.card}>
+          <View style={styles.rowInfo}>
+            <Ionicons name="person-outline" size={18} color="#8e6be8" style={{ marginRight: 8 }} />
+            <Text style={styles.label}><Text style={styles.bold}>Psychologist: </Text>{bookingData.psychologist_name || 'N/A'}</Text>
+          </View>
+          <View style={styles.rowInfo}>
+            <Ionicons name={bookingData.session_type === 'OnlineMeeting' ? 'desktop-outline' : 'walk'} size={18} color="#8e6be8" style={{ marginRight: 8 }} />
+            <Text style={styles.label}><Text style={styles.bold}>Service: </Text>{bookingData.session_type === 'OnlineMeeting' ? 'Online Consultation' : 'In-person Consultation'}</Text>
+          </View>
+          <View style={styles.rowInfo}>
+            <Ionicons name="calendar-outline" size={18} color="#8e6be8" style={{ marginRight: 8 }} />
+            <Text style={styles.label}><Text style={styles.bold}>Time: </Text>{bookingData.slotDetails?.timeRange} on {bookingData.slotDetails?.date}</Text>
+          </View>
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>Your Information</Text>
+          <View style={styles.infoBlock}>
+            <Ionicons name="person-circle-outline" size={16} color="#b39ddb" style={{ marginRight: 6 }} />
+            <Text style={styles.subLabel}>Name: {bookingData.name}</Text>
+          </View>
+          <View style={styles.infoBlock}>
+            <Ionicons name="call-outline" size={16} color="#b39ddb" style={{ marginRight: 6 }} />
+            <Text style={styles.subLabel}>Phone: {bookingData.phone}</Text>
+          </View>
+          <View style={styles.infoBlock}>
+            <Ionicons name="mail-outline" size={16} color="#b39ddb" style={{ marginRight: 6 }} />
+            <Text style={styles.subLabel}>Email: {bookingData.email}</Text>
+          </View>
+        </View>
+        <View style={styles.pricingCard}>
+          <Text style={styles.sectionTitle}>Service Fee</Text>
+          <Text style={styles.price}>
+            {bookingData.session_type === 'OnlineMeeting' ? '599,000 VND' : '799,000 VND'} / 1 hour
+          </Text>
+          <View style={styles.pricingRow}>
+            <Text style={styles.sectionTitle}>Total</Text>
+            <Text style={styles.price}>{bookingData.session_type === 'OnlineMeeting' ? '599,000 VND' : '799,000 VND'}</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmBooking}>
+          <Text style={styles.confirmText}>CONFIRM & PAY</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backButton} onPress={router.back}>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </LinearGradient>
   );
 };
-
 
 export default ConfirmPage;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#fff',
-    flexGrow: 1,
-    paddingTop: 80, // Adjust for status bar height
+  gradientBg: {
+    flex: 1,
+  },
+  scrollContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
   },
   title: {
     fontWeight: 'bold',
-    fontSize: 18,
-    color: '#444',
-    marginBottom: 20,
+    fontSize: 22,
+    color: '#6c5ce7',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   card: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 10,
-    padding: 15,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
     marginBottom: 20,
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    width: '100%',
+  },
+  rowInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   label: {
     fontSize: 16,
-    marginBottom: 5,
-    color: '#222',
-  },
-  subLabel: {
-    fontSize: 15,
-    color: '#555',
-    marginBottom: 2,
+    color: '#6e6592',
+    flex: 1,
   },
   bold: {
     fontWeight: 'bold',
+    color: '#6c5ce7',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8e6be8',
+    marginBottom: 10,
+  },
+  infoBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  subLabel: {
+    fontSize: 15,
+    color: '#7c6bb3',
   },
   divider: {
     height: 1,
-    backgroundColor: '#ccc',
-    marginVertical: 15,
+    backgroundColor: '#ede7fa',
+    marginVertical: 18,
   },
-  notes: {
-    marginBottom: 15,
+  pricingCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+    width: '100%',
   },
-  noteText: {
-    marginTop: 5,
-    color: '#888',
-    fontStyle: 'italic',
-  },
-  pricing: {
+  pricingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6c5ce7',
   },
   confirmButton: {
-    backgroundColor: '#859BFF',
-    paddingVertical: 14,
-    borderRadius: 30,
+    backgroundColor: '#8e6be8',
+    paddingVertical: 16,
+    borderRadius: 24,
     alignItems: 'center',
-    marginTop: 25,
+    width: '100%',
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   confirmText: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 16,
   },
   backButton: {
-    marginTop: 15,
+    marginTop: 20,
     alignItems: 'center',
   },
   backText: {
-    color: '#888',
-    fontSize: 14,
+    color: '#8e6be8',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
 });

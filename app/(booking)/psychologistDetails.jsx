@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import api from '../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 const PsychologistDetails = () => {
   const { id } = useLocalSearchParams(); // get id from route
   const router = useRouter();
@@ -38,7 +39,7 @@ useEffect(() => {
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
 
-  if (!psychologist) return <Text style={{ padding: 20 }}>Không tìm thấy thông tin bác sĩ.</Text>;
+  if (!psychologist) return <Text style={{ padding: 20 }}>Psychologist not found.</Text>;
 
   const {
     full_name,
@@ -53,152 +54,212 @@ useEffect(() => {
   } = psychologist;
 
   return (
-    <ScrollView style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color="#333" />
-      </TouchableOpacity>
-
-      <View style={styles.headerRow}>
-        <Image source={{ uri: user?.profile_picture_url || 'https://via.placeholder.com/100' }} style={styles.profileImage} />
-        <View style={{ flex: 1 }}>
+    <LinearGradient
+      colors={["#f3e9ff", "#e9e4fc", "#f8f6ff"]}
+      style={styles.gradientBg}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#8e6be8" />
+        </TouchableOpacity>
+        <View style={styles.card}>
+          <View style={styles.profileImageWrapper}>
+            <Image source={{ uri: user?.profile_picture_url || 'https://via.placeholder.com/100' }} style={styles.profileImage} />
+          </View>
           <Text style={styles.name}>{full_name}</Text>
-          <Text style={styles.specialty}>{years_of_experience} năm kinh nghiệm</Text>
+          <View style={styles.rowInfo}>
+            <Ionicons name="briefcase" size={16} color="#8e6be8" style={{ marginRight: 6 }} />
+            <Text style={styles.specialty}>{years_of_experience} years experience</Text>
+          </View>
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.introduction}>{biography}</Text>
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>Services</Text>
+          <View style={styles.rowInfo}>
+            <Ionicons name="chatbubbles" size={16} color="#8e6be8" style={{ marginRight: 6 }} />
+            <Text style={styles.servicesText}>
+              {offers_initial_consultation && offers_online_sessions
+                ? 'In-person, Online'
+                : offers_initial_consultation
+                ? 'In-person'
+                : offers_online_sessions
+                ? 'Online'
+                : 'No information'}
+            </Text>
+          </View>
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>Pricing</Text>
+          <Text style={styles.price}>
+            Online: {hourly_rate ? `${hourly_rate} VND / hour` : 'N/A'}
+            {"\n"}
+            In-person: {initial_consultation_rate ? `${initial_consultation_rate} VND / session` : 'N/A'}
+          </Text>
+          <View style={styles.buttonRow}>
+            {offers_initial_consultation && (
+              <TouchableOpacity
+                style={[styles.bookButton, styles.purpleButton]}
+                onPress={() =>
+                  router.push({ pathname: '/bookingPage', params: { id: `${id}`, type: 'offline' } })
+                }
+              >
+                <Text style={styles.bookButtonText}>Book In-person</Text>
+              </TouchableOpacity>
+            )}
+            {offers_online_sessions && (
+              <TouchableOpacity
+                style={[styles.bookButton, styles.greenButton]}
+                onPress={() =>
+                  router.push({ pathname: '/bookingPage', params: { id: `${id}`, type: 'online' } })
+                }
+              >
+                <Text style={styles.bookButtonText}>Book Online</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Giới thiệu</Text>
-      <Text style={styles.introduction}>{biography}</Text>
-
-      <Text style={styles.sectionTitle}>Dịch vụ</Text>
-      <Text style={styles.introduction}>
-        {offers_initial_consultation ? 'Tư vấn trực tiếp, ' : ''}
-        {offers_online_sessions ? 'Tư vấn online' : ''}
-      </Text>
-
-      <Text style={styles.price}>
-        Giá tư vấn online: {hourly_rate}/ 1 giờ VNĐ{"\n"}
-        Giá tư vấn trực tiếp: {initial_consultation_rate}/ 1 buổi VNĐ
-      </Text>
-
-<View style={styles.buttonRow}>
-  {offers_initial_consultation && (
-    <TouchableOpacity
-      style={[styles.bookButton, { backgroundColor: '#7B8CE4' }]}
-      onPress={() =>
-        router.push({
-          pathname: '/bookingPage',
-          params: { id: `${id}`, type: 'offline' },
-        })
-      }
-    >
-      <Text style={styles.bookButtonText}>Tư vấn ban đầu</Text>
-    </TouchableOpacity>
-  )}
-
-  {offers_online_sessions && (
-    <TouchableOpacity
-      style={[styles.bookButton, { backgroundColor: '#6CB28E' }]}
-      onPress={() =>
-        router.push({
-          pathname: '/bookingPage',
-          params: { id: `${id}`, type: 'online' },
-        })
-      }
-    >
-      <Text style={styles.bookButtonText}>Tư vấn online</Text>
-    </TouchableOpacity>
-  )}
-</View>
-
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 export default PsychologistDetails;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#fff',
+  gradientBg: {
     flex: 1,
-    paddingTop: 50, // Adjust for status bar height
+  },
+  scrollContent: {
+    padding: 0,
+    minHeight: '100%',
   },
   backButton: {
-    marginBottom: 16,
+    marginTop: 40,
+    marginLeft: 10,
+    marginBottom: 0,
+    alignSelf: 'flex-start',
+    backgroundColor: '#ede7fa',
+    borderRadius: 20,
+    padding: 6,
+    zIndex: 2,
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
-  headerRow: {
-    flexDirection: 'row',
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 60,
+    marginHorizontal: 12,
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
+  },
+  profileImageWrapper: {
+    borderWidth: 3,
+    borderColor: '#b39ddb',
+    borderRadius: 60,
+    padding: 4,
+    backgroundColor: '#f3e9ff',
+    marginBottom: 12,
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 12,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#ede7fa',
   },
   name: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
-    flexWrap: 'wrap',
+    color: '#6c5ce7',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  rowInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+    alignSelf: 'center',
   },
   specialty: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-    flexWrap: 'wrap',
+    fontSize: 15,
+    color: '#8e6be8',
+    fontWeight: '500',
+    marginTop: 0,
+    textAlign: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-    color: '#444',
+    fontSize: 17,
+    fontWeight: '700',
+    marginTop: 18,
+    marginBottom: 6,
+    color: '#8e6be8',
+    alignSelf: 'flex-start',
   },
   introduction: {
     fontSize: 15,
-    color: '#555',
+    color: '#6e6592',
     lineHeight: 22,
+    marginBottom: 2,
+    alignSelf: 'flex-start',
+  },
+  servicesText: {
+    fontSize: 14,
+    color: '#7c6bb3',
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#ede7fa',
+    width: '100%',
+    marginVertical: 12,
   },
   price: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
+    marginTop: 8,
+    color: '#6c5ce7',
+    alignSelf: 'flex-start',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
     marginTop: 24,
-    color: '#000',
+    width: '100%',
   },
   bookButton: {
-    marginTop: 20,
-    backgroundColor: '#4f46e5',
-    paddingVertical: 14,
-    borderRadius: 8,
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 24,
     alignItems: 'center',
+    marginHorizontal: 2,
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  purpleButton: {
+    backgroundColor: '#8e6be8',
+  },
+  greenButton: {
+    backgroundColor: '#6CB28E',
   },
   bookButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
-  buttonRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  gap: 10,
-  marginTop: 20,
-},
-
-bookButton: {
-  flex: 1,
-  paddingVertical: 14,
-  borderRadius: 8,
-  alignItems: 'center',
-},
-
-bookButtonText: {
-  color: '#fff',
-  fontSize: 15,
-  fontWeight: '600',
-},
-
 });
 

@@ -111,7 +111,7 @@ const Profile = () => {
       if (profileData) {
         console.log('Profile found:', profileData);
         console.log('Profile keys:', Object.keys(profileData));
-        
+
         // Check verification status
         if (profileData.verification_status === 'Pending') {
           // User needs to pay first
@@ -119,9 +119,9 @@ const Profile = () => {
             'Payment Required',
             'You need to complete the registration payment before creating your profile.',
             [
-              { 
-                text: 'Pay Now', 
-                onPress: () => router.replace('/(auth)/psychologistPayment') 
+              {
+                text: 'Pay Now',
+                onPress: () => router.replace('/(auth)/psychologistPayment')
               },
               { text: 'Cancel', style: 'cancel' }
             ]
@@ -129,7 +129,7 @@ const Profile = () => {
           setLoading(false);
           return;
         }
-        
+
         if (profileData.verification_status === 'Rejected') {
           Alert.alert(
             'Verification Rejected',
@@ -139,7 +139,7 @@ const Profile = () => {
           setLoading(false);
           return;
         }
-        
+
         setProfile(profileData);
         setProfilePhoto(profileData.profile_picture_url);
         // Pre-fill form with existing data
@@ -303,7 +303,7 @@ const Profile = () => {
         });
 
         const data = await res.json();
-        
+
         // Update profile with the new image URL
         await updateProfilePhotoUrl(data.secure_url);
       } catch (err) {
@@ -318,24 +318,24 @@ const Profile = () => {
   const updateProfilePhotoUrl = async (photoUrl) => {
     try {
       setUploadingPhoto(true);
-      
+
       // Validate URL format
       if (!photoUrl.startsWith('http://') && !photoUrl.startsWith('https://')) {
         Alert.alert('Invalid URL', 'Please enter a valid URL starting with http:// or https://');
         return;
       }
-      
+
       console.log('Updating profile photo URL:', photoUrl);
-      
+
       const response = await api.patch('/api/psychologists/profile/update_profile/', {
         profile_picture_url: photoUrl
       });
 
       console.log('Profile photo URL updated successfully:', response.data);
-      
+
       // Update local state
       setProfilePhoto(photoUrl);
-      
+
       if (profile) {
         setProfile(prev => ({
           ...prev,
@@ -384,7 +384,7 @@ const Profile = () => {
               Create your professional profile to connect with families and start your journey as a trusted psychologist
           </Text>
           </View>
-          
+
           <Animated.View style={{ transform: [{ scale: animatedValue }], width: '100%' }}>
             <Pressable
               style={({ pressed }) => [
@@ -433,318 +433,346 @@ const Profile = () => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity 
-              style={styles.profileAvatarContainer} 
-              onPress={pickImageAndUpload}
-              disabled={uploadingPhoto}
-              activeOpacity={0.7}
-            >
-              {(profilePhoto || profile.profile_picture_url) ? (
-                <Image 
-                  source={{ 
-                    uri: (() => {
-                      // Check if profilePhoto is valid
-                      if (typeof profilePhoto === 'string' && profilePhoto !== '[object Object]' && profilePhoto.startsWith('http')) {
-                        return profilePhoto;
-                      }
-                      // Check if profile.profile_picture_url is valid
-                      if (typeof profile.profile_picture_url === 'string' && 
-                          profile.profile_picture_url !== '[object Object]' && 
-                          profile.profile_picture_url.startsWith('http')) {
-                        return profile.profile_picture_url;
-                      }
-                      // Check if it's an object with URL properties
-                      if (typeof profile.profile_picture_url === 'object' && profile.profile_picture_url !== null) {
-                        return profile.profile_picture_url.url || profile.profile_picture_url.uri || profile.profile_picture_url.src;
-                      }
-                      return null;
-                    })()
-                  }} 
-                  style={styles.profileAvatarImage} 
-                />
-              ) : (
-                <View style={styles.profileAvatar}>
-                  <Text style={styles.avatarText}>
-                    {profile.first_name?.[0] || 'P'}{profile.last_name?.[0] || 'S'}
-                  </Text>
+        <View>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <TouchableOpacity
+                style={styles.profileAvatarContainer}
+                onPress={pickImageAndUpload}
+                disabled={uploadingPhoto}
+                activeOpacity={0.7}
+              >
+                {(profilePhoto || profile.profile_picture_url) ? (
+                  <Image
+                    source={{
+                      uri: (() => {
+                        // Check if profilePhoto is valid
+                        if (typeof profilePhoto === 'string' && profilePhoto !== '[object Object]' && profilePhoto.startsWith('http')) {
+                          return profilePhoto;
+                        }
+                        // Check if profile.profile_picture_url is valid
+                        if (typeof profile.profile_picture_url === 'string' &&
+                            profile.profile_picture_url !== '[object Object]' &&
+                            profile.profile_picture_url.startsWith('http')) {
+                          return profile.profile_picture_url;
+                        }
+                        // Check if it's an object with URL properties
+                        if (typeof profile.profile_picture_url === 'object' && profile.profile_picture_url !== null) {
+                          return profile.profile_picture_url.url || profile.profile_picture_url.uri || profile.profile_picture_url.src;
+                        }
+                        return null;
+                      })()
+                    }}
+                    style={styles.profileAvatarImage}
+                  />
+                ) : (
+                  <View style={styles.profileAvatar}>
+                    <Text style={styles.avatarText}>
+                      {profile.first_name?.[0] || 'P'}{profile.last_name?.[0] || 'S'}
+                    </Text>
+                  </View>
+                )}
+                {console.log('profilePhoto state:', profilePhoto)}
+                {console.log('profile.profile_picture_url:', profile.profile_picture_url)}
+                {console.log('profile.profile_picture_url type:', typeof profile.profile_picture_url)}
+                {console.log('Final image URI:', typeof profilePhoto === 'string' ? profilePhoto :
+                             typeof profile.profile_picture_url === 'string' ? profile.profile_picture_url :
+                             profile.profile_picture_url?.url || profile.profile_picture_url?.uri || profile.profile_picture_url?.src)}
+                {uploadingPhoto && (
+                  <View style={styles.uploadOverlay}>
+                    <Animated.View
+                      style={[
+                        styles.uploadSpinner,
+                        { transform: [{ rotate: spin }] }
+                      ]}
+                    />
+                  </View>
+                )}
+                <View style={styles.photoUploadIndicator}>
+                  <Ionicons name="link" size={16} color="#fff" />
                 </View>
+              </TouchableOpacity>
+              <View style={styles.headerInfo}>
+                <Text style={styles.profileName}>
+                  {profile.first_name} {profile.last_name}
+                </Text>
+                <Text style={styles.profileTitle}>Licensed Psychologist</Text>
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={16} color="#ffd700" />
+                  <Text style={styles.ratingText}>4.8 (24 reviews)</Text>
+                </View>
+              </View>
+              {!isEditing && (
+                <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+                  <Ionicons name="create" size={20} color="#6c63ff" />
+                </TouchableOpacity>
               )}
-              {console.log('profilePhoto state:', profilePhoto)}
-              {console.log('profile.profile_picture_url:', profile.profile_picture_url)}
-              {console.log('profile.profile_picture_url type:', typeof profile.profile_picture_url)}
-              {console.log('Final image URI:', typeof profilePhoto === 'string' ? profilePhoto : 
-                           typeof profile.profile_picture_url === 'string' ? profile.profile_picture_url :
-                           profile.profile_picture_url?.url || profile.profile_picture_url?.uri || profile.profile_picture_url?.src)}
-              {uploadingPhoto && (
-                <View style={styles.uploadOverlay}>
-                  <Animated.View
-                    style={[
-                      styles.uploadSpinner,
-                      { transform: [{ rotate: spin }] }
-                    ]}
+            </View>
+          </View>
+
+          {isEditing ? (
+            // Edit Mode
+            <View style={styles.editContainer}>
+              <View style={styles.editHeader}>
+                <Text style={styles.editTitle}>Edit Profile</Text>
+                <Text style={styles.editSubtitle}>Update your professional information</Text>
+              </View>
+
+              <View style={styles.formContainer}>
+                <View style={styles.formSection}>
+                  <Text style={styles.sectionTitle}>Personal Information</Text>
+                  <FormField
+                    label="First Name"
+                    value={formData.first_name}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, first_name: text }))}
+                    placeholder="Enter your first name"
+                    icon="person"
+                  />
+
+                  <FormField
+                    label="Last Name"
+                    value={formData.last_name}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, last_name: text }))}
+                    placeholder="Enter your last name"
+                    icon="person"
+                  />
+
+                  <FormField
+                    label="Biography"
+                    value={formData.biography}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, biography: text }))}
+                    placeholder="Tell us about your professional background, approach, and expertise..."
+                    multiline={true}
+                    icon="document-text"
                   />
                 </View>
-              )}
-              <View style={styles.photoUploadIndicator}>
-                <Ionicons name="link" size={16} color="#fff" />
-              </View>
-            </TouchableOpacity>
-            <View style={styles.headerInfo}>
-              <Text style={styles.profileName}>
-                {profile.first_name} {profile.last_name}
-              </Text>
-              <Text style={styles.profileTitle}>Licensed Psychologist</Text>
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={16} color="#ffd700" />
-                <Text style={styles.ratingText}>4.8 (24 reviews)</Text>
-              </View>
-            </View>
-            {!isEditing && (
-              <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-                <Ionicons name="create" size={20} color="#6c63ff" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
 
-        {isEditing ? (
-          // Edit Mode
-          <View style={styles.editContainer}>
-            <View style={styles.editHeader}>
-              <Text style={styles.editTitle}>Edit Profile</Text>
-              <Text style={styles.editSubtitle}>Update your professional information</Text>
-            </View>
+                <View style={styles.formSection}>
+                  <Text style={styles.sectionTitle}>Professional Credentials</Text>
+                  <FormField
+                    label="Years of Experience"
+                    value={formData.years_of_experience}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, years_of_experience: text }))}
+                    placeholder="Enter number of years"
+                    keyboardType="numeric"
+                    icon="time"
+                  />
 
-            <View style={styles.formContainer}>
-              <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Personal Information</Text>
-                <FormField
-                  label="First Name"
-                  value={formData.first_name}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, first_name: text }))}
-                  placeholder="Enter your first name"
-                  icon="person"
-                />
+                  <FormField
+                    label="License Number"
+                    value={formData.license_number}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, license_number: text }))}
+                    placeholder="Enter your license number"
+                    icon="shield-checkmark"
+                  />
 
-                <FormField
-                  label="Last Name"
-                  value={formData.last_name}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, last_name: text }))}
-                  placeholder="Enter your last name"
-                  icon="person"
-                />
+                  <FormField
+                    label="License Issuing Authority"
+                    value={formData.license_issuing_authority}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, license_issuing_authority: text }))}
+                    placeholder="Enter issuing authority"
+                    icon="business"
+                  />
 
-                <FormField
-                  label="Biography"
-                  value={formData.biography}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, biography: text }))}
-                  placeholder="Tell us about your professional background, approach, and expertise..."
-                  multiline={true}
-                  icon="document-text"
-                />
-              </View>
+                  <FormField
+                    label="License Expiry Date"
+                    value={formData.license_expiry_date}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, license_expiry_date: text }))}
+                    placeholder="YYYY-MM-DD"
+                    icon="calendar"
+                  />
+                </View>
 
-              <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Professional Credentials</Text>
-                <FormField
-                  label="Years of Experience"
-                  value={formData.years_of_experience}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, years_of_experience: text }))}
-                  placeholder="Enter number of years"
-                  keyboardType="numeric"
-                  icon="time"
-                />
+                <View style={styles.formSection}>
+                  <Text style={styles.sectionTitle}>Contact & Location</Text>
+                  <FormField
+                    label="Office Address"
+                    value={formData.office_address}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, office_address: text }))}
+                    placeholder="Enter your office address"
+                    multiline={true}
+                    icon="location"
+                  />
 
-                <FormField
-                  label="License Number"
-                  value={formData.license_number}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, license_number: text }))}
-                  placeholder="Enter your license number"
-                  icon="shield-checkmark"
-                />
+                  <FormField
+                    label="Website URL"
+                    value={formData.website_url}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, website_url: text }))}
+                    placeholder="https://your-website.com"
+                    keyboardType="url"
+                    icon="globe"
+                  />
 
-                <FormField
-                  label="License Issuing Authority"
-                  value={formData.license_issuing_authority}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, license_issuing_authority: text }))}
-                  placeholder="Enter issuing authority"
-                  icon="business"
-                />
+                  <FormField
+                    label="LinkedIn URL"
+                    value={formData.linkedin_url}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, linkedin_url: text }))}
+                    placeholder="https://linkedin.com/in/your-profile"
+                    keyboardType="url"
+                    icon="logo-linkedin"
+                  />
+                </View>
 
-                <FormField
-                  label="License Expiry Date"
-                  value={formData.license_expiry_date}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, license_expiry_date: text }))}
-                  placeholder="YYYY-MM-DD"
-                  icon="calendar"
-                />
-              </View>
+                <View style={styles.formSection}>
+                  <Text style={styles.sectionTitle}>Pricing</Text>
+                  <FormField
+                    label="Hourly Rate (USD)"
+                    value={formData.hourly_rate}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, hourly_rate: text }))}
+                    placeholder="Enter hourly rate"
+                    keyboardType="decimal-pad"
+                    icon="card"
+                  />
 
-              <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Contact & Location</Text>
-                <FormField
-                  label="Office Address"
-                  value={formData.office_address}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, office_address: text }))}
-                  placeholder="Enter your office address"
-                  multiline={true}
-                  icon="location"
-                />
+                  <FormField
+                    label="Initial Consultation Rate (USD)"
+                    value={formData.initial_consultation_rate}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, initial_consultation_rate: text }))}
+                    placeholder="Enter consultation rate"
+                    keyboardType="decimal-pad"
+                    icon="card"
+                  />
+                </View>
 
-                <FormField
-                  label="Website URL"
-                  value={formData.website_url}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, website_url: text }))}
-                  placeholder="https://your-website.com"
-                  keyboardType="url"
-                  icon="globe"
-                />
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.cancelButton]}
+                    onPress={handleCancelEdit}
+                    disabled={saving}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
 
-                <FormField
-                  label="LinkedIn URL"
-                  value={formData.linkedin_url}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, linkedin_url: text }))}
-                  placeholder="https://linkedin.com/in/your-profile"
-                  keyboardType="url"
-                  icon="logo-linkedin"
-                />
-              </View>
-
-              <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Pricing</Text>
-                <FormField
-                  label="Hourly Rate (USD)"
-                  value={formData.hourly_rate}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, hourly_rate: text }))}
-                  placeholder="Enter hourly rate"
-                  keyboardType="decimal-pad"
-                  icon="card"
-                />
-
-                <FormField
-                  label="Initial Consultation Rate (USD)"
-                  value={formData.initial_consultation_rate}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, initial_consultation_rate: text }))}
-                  placeholder="Enter consultation rate"
-                  keyboardType="decimal-pad"
-                  icon="card"
-                />
-              </View>
-
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.cancelButton]}
-                  onPress={handleCancelEdit}
-                  disabled={saving}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.saveButton]}
-                  onPress={handleSaveProfile}
-                  disabled={saving}
-                >
-                  <Ionicons name="checkmark" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.saveButtonText}>
-                    {saving ? 'Saving...' : 'Save Changes'}
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.saveButton]}
+                    onPress={handleSaveProfile}
+                    disabled={saving}
+                  >
+                    <Ionicons name="checkmark" size={20} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.saveButtonText}>
+                      {saving ? 'Saving...' : 'Save Changes'}
           </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : (
+            // View Mode
+            <View style={styles.profileContent}>
+              <View>
+                {/* About Section */}
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="information-circle" size={24} color="#6c63ff" />
+                    <Text style={styles.sectionTitle}>About</Text>
+                  </View>
+                  <Text style={styles.bioText}>{profile.biography || 'No biography available.'}</Text>
+                </View>
+
+                {/* Experience & Credentials */}
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="school" size={24} color="#6c63ff" />
+                    <Text style={styles.sectionTitle}>Experience & Credentials</Text>
+                  </View>
+                  <View style={styles.infoGrid}>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Experience</Text>
+                      <Text style={styles.infoValue}>{profile.years_of_experience || 0} years</Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>License</Text>
+                      <Text style={styles.infoValue}>{profile.license_number || 'Not specified'}</Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Authority</Text>
+                      <Text style={styles.infoValue}>{profile.license_issuing_authority || 'Not specified'}</Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Expiry</Text>
+                      <Text style={styles.infoValue}>{profile.license_expiry_date || 'Not specified'}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Pricing */}
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="card" size={24} color="#6c63ff" />
+                    <Text style={styles.sectionTitle}>Pricing</Text>
+                  </View>
+                  <View style={styles.pricingContainer}>
+                    <View style={styles.pricingItem}>
+                      <Text style={styles.pricingLabel}>Hourly Rate</Text>
+                      <Text style={styles.pricingValue}>${profile.hourly_rate || 'Not set'}</Text>
+                    </View>
+                    <View style={styles.pricingItem}>
+                      <Text style={styles.pricingLabel}>Initial Consultation</Text>
+                      <Text style={styles.pricingValue}>${profile.initial_consultation_rate || 'Not set'}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Contact Information */}
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="call" size={24} color="#6c63ff" />
+                    <Text style={styles.sectionTitle}>Contact Information</Text>
+                  </View>
+                  <View style={styles.contactList}>
+                    {profile.office_address && (
+                      <View style={styles.contactItem}>
+                        <Ionicons name="location" size={20} color="#6c63ff" />
+                        <Text style={styles.contactText}>{profile.office_address}</Text>
+                      </View>
+                    )}
+                    {profile.website_url && (
+                      <View style={styles.contactItem}>
+                        <Ionicons name="globe" size={20} color="#6c63ff" />
+                        <Text style={styles.contactText}>{profile.website_url}</Text>
+                      </View>
+                    )}
+                    {profile.linkedin_url && (
+                      <View style={styles.contactItem}>
+                        <Ionicons name="logo-linkedin" size={20} color="#6c63ff" />
+                        <Text style={styles.contactText}>{profile.linkedin_url}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Revenue Button */}
+                <TouchableOpacity
+                  style={{
+                    marginTop: 24,
+                    marginBottom: 24,
+                    backgroundColor: '#6c63ff',
+                    paddingVertical: 16,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    shadowColor: '#6c63ff',
+                    shadowOffset: {
+                      width: 0,
+                      height: 4,
+                    },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}
+                  onPress={() => router.push('/(Pychologist)/revenue')}
+                >
+                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>View Revenue</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        ) : (
-          // View Mode
-          <View style={styles.profileContent}>
-            {/* About Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="information-circle" size={24} color="#6c63ff" />
-                <Text style={styles.sectionTitle}>About</Text>
-              </View>
-              <Text style={styles.bioText}>{profile.biography || 'No biography available.'}</Text>
-            </View>
-
-            {/* Experience & Credentials */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="school" size={24} color="#6c63ff" />
-                <Text style={styles.sectionTitle}>Experience & Credentials</Text>
-              </View>
-              <View style={styles.infoGrid}>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Experience</Text>
-                  <Text style={styles.infoValue}>{profile.years_of_experience || 0} years</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>License</Text>
-                  <Text style={styles.infoValue}>{profile.license_number || 'Not specified'}</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Authority</Text>
-                  <Text style={styles.infoValue}>{profile.license_issuing_authority || 'Not specified'}</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Expiry</Text>
-                  <Text style={styles.infoValue}>{profile.license_expiry_date || 'Not specified'}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Pricing */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="card" size={24} color="#6c63ff" />
-                <Text style={styles.sectionTitle}>Pricing</Text>
-              </View>
-              <View style={styles.pricingContainer}>
-                <View style={styles.pricingItem}>
-                  <Text style={styles.pricingLabel}>Hourly Rate</Text>
-                  <Text style={styles.pricingValue}>${profile.hourly_rate || 'Not set'}</Text>
-                </View>
-                <View style={styles.pricingItem}>
-                  <Text style={styles.pricingLabel}>Initial Consultation</Text>
-                  <Text style={styles.pricingValue}>${profile.initial_consultation_rate || 'Not set'}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Contact Information */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="call" size={24} color="#6c63ff" />
-                <Text style={styles.sectionTitle}>Contact Information</Text>
-          </View>
-              <View style={styles.contactList}>
-                {profile.office_address && (
-                  <View style={styles.contactItem}>
-                    <Ionicons name="location" size={20} color="#6c63ff" />
-                    <Text style={styles.contactText}>{profile.office_address}</Text>
-          </View>
-                )}
-                {profile.website_url && (
-                  <View style={styles.contactItem}>
-                    <Ionicons name="globe" size={20} color="#6c63ff" />
-                    <Text style={styles.contactText}>{profile.website_url}</Text>
-          </View>
-                )}
-                {profile.linkedin_url && (
-                  <View style={styles.contactItem}>
-                    <Ionicons name="logo-linkedin" size={20} color="#6c63ff" />
-                    <Text style={styles.contactText}>{profile.linkedin_url}</Text>
-          </View>
-                )}
-          </View>
-          </View>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
     </View>
-  );
-};
+      
+    );
+  };
 
 export default Profile;
 

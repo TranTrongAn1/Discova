@@ -1,6 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Linking, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Image, Linking, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LocaleConfig } from 'react-native-calendars';
 import api from '../(auth)/api';
 
@@ -18,6 +21,9 @@ const Calendar = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [appointmentDetails, setAppointmentDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [faceImage, setFaceImage] = useState(null);
+  const [faceVerifying, setFaceVerifying] = useState(false);
+  const [faceResult, setFaceResult] = useState(null);
 
   // Add state for current week navigation
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -652,6 +658,211 @@ const Calendar = () => {
     }
   }, [showAppointmentDetails, selectedAppointment]);
 
+  const pickFaceImage = async () => {
+    try {
+      // Request camera permissions first
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (permissionResult.status !== 'granted') {
+        Alert.alert(
+          'Camera Permission Required',
+          'Please allow camera access to take parent photos for verification.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+
+      console.log('Launching camera...');
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // force 1:1 aspect
+        quality: 1,
+      });
+
+      console.log('Camera result:', result);
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Resize to 736x736
+        const manipulated = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 736, height: 736 } }],
+          { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        console.log('Resized face image:', manipulated.uri);
+        setFaceImage(manipulated.uri);
+        Alert.alert('Success', 'Photo captured successfully!');
+      } else {
+        console.log('Camera cancelled or no image selected');
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      Alert.alert('Error', 'Failed to open camera. Please try again.');
+    }
+  };
+
+  const testFaceVerificationEndpoint = async () => {
+    try {
+      const appointmentId = selectedAppointment.originalData?.appointment_id || selectedAppointment.id;
+      console.log('🧪 Testing face verification endpoint...');
+      console.log('🎯 Testing with appointment ID:', appointmentId);
+      
+      // Try a simple GET request to see if the endpoint exists
+      const testResponse = await api.get(`/api/appointments/${appointmentId}/`);
+      console.log('✅ Appointment exists:', testResponse.data);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Endpoint test failed:', error.response?.status, error.response?.data);
+      return false;
+    }
+  };
+
+  const verifyFace = async () => {
+    if (!faceImage || !selectedAppointment) {
+      Alert.alert('Error', 'Please take a photo first!');
+      return;
+    }
+    
+    setFaceVerifying(true);
+    setFaceResult(null);
+    
+    try {
+      console.log('🔍 Starting face verification...');
+      console.log('📋 Appointment ID:', selectedAppointment.id);
+      console.log('📋 Appointment original data:', selectedAppointment.originalData);
+      console.log('📋 Original appointment_id:', selectedAppointment.originalData?.appointment_id);
+      console.log('📸 Image URI:', faceImage);
+      
+      const token = await AsyncStorage.getItem('access_token');
+      
+      if (!token) {
+        Alert.alert('Error', 'Authentication required. Please login again.');
+        return;
+      }
+
+      console.log('🔑 Token found:', token.substring(0, 20) + '...');
+
+      // Use the correct appointment ID from original data
+      const appointmentId = selectedAppointment.originalData?.appointment_id || selectedAppointment.id;
+      console.log('🎯 Using appointment ID:', appointmentId);
+
+      // Test if the endpoint exists first
+      const endpointExists = await testFaceVerificationEndpoint();
+      if (!endpointExists) {
+        Alert.alert('Error', 'Face verification endpoint not available. Please contact support.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', {
+        uri: faceImage,
+        name: 'parent.jpg',
+        type: 'image/jpeg',
+      });
+
+      console.log('📤 FormData created with image');
+      console.log('🌐 Making API call to:', `/api/appointments/${appointmentId}/verify_face/`);
+      
+      // Use the correct face verification endpoint
+      const response = await api.post(
+        `/api/appointments/${appointmentId}/verify_face/`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      console.log('✅ Face verification response status:', response.status);
+      console.log('📄 Face verification response data:', response.data);
+      
+      setFaceResult(response.data);
+      
+      if (response.data.status === 'success') {
+        Alert.alert(
+          'Success', 
+          'Face verification completed successfully! Session started.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                fetchAppointments();
+                setShowAppointmentDetails(false);
+              }
+            }
+          ]
+        );
+        fetchAppointments();
+      } else {
+        Alert.alert('Verification Failed', response.data.message || 'Face verification failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('❌ Face verification error:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error response data:', error.response?.data);
+      console.error('❌ Error response status:', error.response?.status);
+      console.error('❌ Error response headers:', error.response?.headers);
+      
+      let errorMessage = 'Network error. Please check your connection and try again.';
+      
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        console.log('🔍 400 Error data:', errorData);
+        if (errorData.error_code === 'NO_FACE_DETECTED') {
+          errorMessage = 'No face detected in the image. Please ensure the parent is clearly visible.';
+        } else if (errorData.error_code === 'MULTIPLE_FACES') {
+          errorMessage = 'Multiple faces detected. Please ensure only the parent is in the image.';
+        } else if (errorData.error_code === 'NO_EMBEDDING') {
+          errorMessage = 'Parent does not have a face embedding. Please ask them to update their profile picture.';
+        } else {
+          errorMessage = errorData.message || 'Face verification failed. Please try again.';
+        }
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Permission denied. Only assigned psychologist can verify.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Appointment not found.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      
+      console.log('📝 Final error message:', errorMessage);
+      setFaceResult({ status: 'failure', message: errorMessage });
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setFaceVerifying(false);
+    }
+  };
+
+  const manualVerifySession = async () => {
+    if (!selectedAppointment) return;
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        Alert.alert('Error', 'Authentication required. Please login again.');
+        return;
+      }
+      const appointmentId = selectedAppointment.originalData?.appointment_id || selectedAppointment.id;
+      const response = await api.post(
+        `/api/appointments/${appointmentId}/start_online_session/`,
+        {},
+        {
+          headers: { Authorization: `Token ${token}` },
+        }
+      );
+      Alert.alert('Success', 'Session started manually!');
+      fetchAppointments();
+      setShowAppointmentDetails(false);
+    } catch (error) {
+      console.error('Manual verify error:', error);
+      Alert.alert('Error', 'Could not start session manually.');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -947,12 +1158,121 @@ const Calendar = () => {
                       </TouchableOpacity>
                     </View>
                   )}
+                  
+                  {/* Face Verification Section - Inside ScrollView */}
+                  {appointmentDetails && (appointmentDetails.appointment_status !== 'In_Progress' && appointmentDetails.appointment_status !== 'Completed') && (
+                    <View style={styles.infoSection}>
+                      <Text style={styles.sectionTitle}>Face Verification</Text>
+                      <View style={styles.infoCard}>
+                        <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                          <TouchableOpacity
+                            onPress={pickFaceImage}
+                            style={{
+                              backgroundColor: '#6c5ce7',
+                              width: 60,
+                              height: 60,
+                              borderRadius: 30,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.2,
+                              shadowRadius: 4,
+                              elevation: 4,
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="camera" size={28} color="#fff" />
+                          </TouchableOpacity>
+                          <Text style={{ marginTop: 6, color: '#6c5ce7', fontWeight: 'bold', fontSize: 14 }}>
+                            {faceImage ? 'Retake Photo' : 'Take Parent Photo'}
+                          </Text>
+                          {faceImage && (
+                            <View style={{ alignItems: 'center', marginVertical: 8 }}>
+                              <Image 
+                                source={{ uri: faceImage }} 
+                                style={{ 
+                                  width: 120, 
+                                  height: 120, 
+                                  borderRadius: 8,
+                                  borderWidth: 2,
+                                  borderColor: '#6c5ce7'
+                                }} 
+                              />
+                            </View>
+                          )}
+                          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8 }}>
+                            <TouchableOpacity
+                              style={{
+                                backgroundColor: faceImage ? '#6c5ce7' : '#ccc',
+                                borderRadius: 20,
+                                paddingVertical: 10,
+                                paddingHorizontal: 16,
+                                alignItems: 'center',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.15,
+                                shadowRadius: 4,
+                                elevation: 2,
+                                marginRight: 8,
+                              }}
+                              onPress={verifyFace}
+                              disabled={!faceImage || faceVerifying}
+                            >
+                              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
+                                {faceVerifying ? 'Verifying...' : 'Face Verify'}
+                              </Text>
+                            </TouchableOpacity>
+                            {appointmentDetails && (appointmentDetails.appointment_status !== 'In_Progress' && appointmentDetails.appointment_status !== 'Completed' && appointmentDetails.session_type === 'OnlineMeeting') && (
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: '#4CAF50',
+                                  borderRadius: 20,
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 16,
+                                  alignItems: 'center',
+                                  shadowColor: '#000',
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.15,
+                                  shadowRadius: 4,
+                                  elevation: 2,
+                                }}
+                                onPress={manualVerifySession}
+                              >
+                                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
+                                  Manual Verify
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          {faceResult && (
+                            <View style={{ marginTop: 8, alignItems: 'center', paddingHorizontal: 16 }}>
+                              <Text style={{ 
+                                color: faceResult.status === 'success' ? 'green' : 'red', 
+                                fontWeight: 'bold',
+                                fontSize: 12,
+                                textAlign: 'center'
+                              }}>
+                                {faceResult.message}
+                              </Text>
+                              {faceResult.confidence_score && (
+                                <Text style={{ fontSize: 11, marginTop: 2 }}>Confidence: {faceResult.confidence_score}</Text>
+                              )}
+                              {faceResult.parent_name && (
+                                <Text style={{ fontSize: 11, marginTop: 2 }}>Parent: {faceResult.parent_name}</Text>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  )}
                 </>
               ) : (
                 <Text style={{ color: '#f44336', textAlign: 'center', marginVertical: 40 }}>Could not load appointment details.</Text>
               )}
             </ScrollView>
-            {/* Professional Action Buttons */}
+            {/* Remove the old face verification section that was outside ScrollView */}
             <View style={styles.modalActions}>
               <View style={styles.actionButtonsRow}>
                 <TouchableOpacity 

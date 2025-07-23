@@ -1,7 +1,11 @@
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function ParentLayout() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -28,13 +32,21 @@ export default function ParentLayout() {
           return (
               <View
               style={{
-                backgroundColor: focused ? '#8E97FD' : 'transparent',
+                backgroundColor: focused ? '#6c63ff' : 'transparent',
                 width: 50,
                 height: 50,
                 borderRadius: 15,
-                marginBottom: 30,
+                marginBottom: 15,
                 justifyContent: 'center',
                 alignItems: 'center',
+                shadowColor: focused ? '#6c63ff' : 'transparent',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: focused ? 0.3 : 0,
+                shadowRadius: 4,
+                elevation: focused ? 4 : 0,
               }}
             >
               <Ionicons
@@ -46,20 +58,32 @@ export default function ParentLayout() {
          );
 
         },
-        tabBarActiveTintColor: '#8D86F8',
+        tabBarActiveTintColor: '#6c63ff',
         tabBarInactiveTintColor: '#A0A0A0',
         tabBarStyle: {
-          height: 100,
-          paddingTop: 30,
+          height: Platform.OS === 'ios' ? 110 : 100,
+          paddingTop: 15,
+          paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom + 10, 30) : Math.max(insets.bottom + 10, 20),
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#f0f0f0',
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 8,
         },
         headerShown: false,
       })}
     >
-      <Tabs.Screen name="home" options={{ title: 'home',   }}/>
-      <Tabs.Screen name="chat" options={{ title: 'chat',   }}/>
-      <Tabs.Screen name="calendar" options={{ title: 'đặt lịch',   }}/>
-      <Tabs.Screen name="communication" options={{ title: 'cộng đồng',   }}/>
-      <Tabs.Screen name="(profile)" options={{ title: 'hồ sơ', unmountOnBlur: true }}/>
+      <Tabs.Screen name="home" options={{ title: 'Home',   }}/>
+      <Tabs.Screen name="chat" options={{ title: 'Chat',   }}/>
+      <Tabs.Screen name="calendar" options={{ title: 'Book',   }}/>
+      <Tabs.Screen name="communication" options={{ title: 'Community',   }}/>
+      <Tabs.Screen name="(profile)" options={{ title: 'Profile', unmountOnBlur: true }}/>
     </Tabs>
   );
 }

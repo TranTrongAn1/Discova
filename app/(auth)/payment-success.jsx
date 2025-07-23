@@ -5,7 +5,6 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Linking,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -82,207 +81,112 @@ const PaymentSuccess = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#27ae60', '#2ecc71']}
-        style={styles.header}
-      >
-        <View style={styles.successIcon}>
-          <Ionicons name="checkmark-circle" size={80} color="white" />
-        </View>
-        <Text style={styles.headerTitle}>Payment Received!</Text>
-        <Text style={styles.headerSubtitle}>Thank you for completing your registration</Text>
-      </LinearGradient>
-
-      <View style={styles.content}>
-        <View style={styles.successCard}>
-          <Text style={styles.successTitle}>Registration Complete</Text>
-          <Text style={styles.successDescription}>
-            Your psychologist registration fee has been processed successfully. 
-            You can now create your professional profile and start accepting clients.
+    <LinearGradient
+      colors={["#f3e9ff", "#e9e4fc", "#f8f6ff"]}
+      style={styles.gradientBg}
+    >
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <Ionicons name="checkmark-circle-outline" size={80} color="#27ae60" style={styles.icon} />
+          <Text style={styles.title}>Payment Successful!</Text>
+          <Text style={styles.message}>
+            Your appointment has been successfully booked. You will receive a confirmation email shortly.
           </Text>
         </View>
-
         <View style={styles.nextStepsCard}>
-          <Text style={styles.nextStepsTitle}>Next Steps:</Text>
+          <Text style={styles.nextStepsTitle}>What's Next?</Text>
           <View style={styles.stepItem}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>1</Text>
-            </View>
-            <Text style={styles.stepText}>Create your professional profile</Text>
+            <Text style={styles.stepText}>1. Check your email for booking confirmation.</Text>
           </View>
           <View style={styles.stepItem}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>2</Text>
-            </View>
-            <Text style={styles.stepText}>Set your availability and rates</Text>
-          </View>
-          <View style={styles.stepItem}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>3</Text>
-            </View>
-            <Text style={styles.stepText}>Start accepting client bookings</Text>
+            <Text style={styles.stepText}>2. You can view your upcoming appointments in your profile.</Text>
           </View>
         </View>
-
         <TouchableOpacity
-          style={styles.continueButton}
-          onPress={() => router.replace('/(Pychologist)/profile')}
+          style={styles.button}
+          onPress={() => router.replace('/(parent)/home')}
         >
-          <Text style={styles.continueButtonText}>Create My Profile</Text>
-          <Ionicons name="arrow-forward" size={20} color="white" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.supportButton}
-          onPress={() => Linking.openURL('mailto:support@discova.com')}
-        >
-          <Ionicons name="mail" size={16} color="#6c5ce7" />
-          <Text style={styles.supportButtonText}>Contact Support</Text>
+          <Text style={styles.buttonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  gradientBg: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-  loadingContainer: {
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6c757d',
-  },
-  header: {
-    paddingTop: 80,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  successIcon: {
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
-  content: {
     padding: 20,
-    flex: 1,
   },
-  successCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 24,
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 30,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#8e6be8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  successTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 12,
-    textAlign: 'center',
+  icon: {
+    marginBottom: 20,
   },
-  successDescription: {
-    fontSize: 14,
-    color: '#6c757d',
-    lineHeight: 20,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#6c5ce7',
+    marginBottom: 10,
+  },
+  message: {
+    fontSize: 16,
     textAlign: 'center',
+    color: '#6e6592',
+    lineHeight: 22,
   },
   nextStepsCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 18,
+    padding: 20,
+    width: '100%',
     marginBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   nextStepsTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 16,
+    fontWeight: 'bold',
+    color: '#8e6be8',
+    marginBottom: 12,
   },
   stepItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  stepNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#6c5ce7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  stepNumberText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+    marginBottom: 8,
   },
   stepText: {
-    fontSize: 14,
-    color: '#2c3e50',
-    flex: 1,
+    fontSize: 15,
+    color: '#7c6bb3',
   },
-  continueButton: {
-    backgroundColor: '#6c5ce7',
-    borderRadius: 12,
+  button: {
+    backgroundColor: '#8e6be8',
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
+    paddingHorizontal: 30,
+    borderRadius: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: '#6c5ce7',
+    shadowColor: '#8e6be8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
-  continueButtonText: {
-    color: 'white',
+  buttonText: {
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  supportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  supportButtonText: {
-    color: '#6c5ce7',
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 8,
+    fontWeight: 'bold',
   },
 });
 

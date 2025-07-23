@@ -204,22 +204,9 @@ const EditProfile = () => {
     await method(endpoint, payload);
     
     Alert.alert(
-      'Thành công', 
-      `Hồ sơ ${isNewProfile ? 'đã được tạo' : 'đã được cập nhật'} thành công!`,
-      [
-        {
-          text: 'Tiếp tục',
-          onPress: () => {
-            if (isNewProfile) {
-              // New profile created - redirect to psychologist home
-              router.replace('/(Pychologist)/profile');
-            } else {
-              // Profile updated - go back to profile page
-              router.back();
-            }
-          }
-        }
-      ]
+      'Success',
+      `Profile ${isNewProfile ? 'created' : 'updated'} successfully!`,
+      [{ text: 'OK', onPress: () => navigation.navigate('profile') }]
     );
   } catch (error) {
     const errorMessage = error.response?.data?.detail || JSON.stringify(error.response?.data) || `Could not ${isNewProfile ? 'create' : 'update'} profile.`;

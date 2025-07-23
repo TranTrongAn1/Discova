@@ -1,9 +1,9 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import default_image from '../../../assets/images/default-profile.png';
-import api from '../../(auth)/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
+import React, { useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import api from '../../(auth)/api';
+import default_image from '../../../assets/images/default-profile.png';
 
 const Info = ({ navigation }) => {
   const [userInfo, setUserInfo] = useState(null);
@@ -52,60 +52,77 @@ const Info = ({ navigation }) => {
   if (!userInfo) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Đang tải thông tin...</Text>
+        <Text style={styles.title}>Loading information...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Thông tin cơ bản</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.title}>Basic Information</Text>
+      </View>
 
-        <View style={styles.card}>
-          <View style={styles.avatarRow}>
-              <Image
-                source={userInfo.img && userInfo.img.startsWith('http') ? { uri: userInfo.img } : default_image}
-                style={styles.avatar}
-              />
-
-          </View>
-
-          <View style={styles.infoBlock}>
-            <Text style={styles.label}>
-              <Text style={styles.bold}>Họ:</Text> {userInfo.first_name || 'Chưa nhập'}
-            </Text>
-            <Text style={styles.label}>
-              <Text style={styles.bold}>Tên:</Text> {userInfo.last_name || 'Chưa nhập'}
-            </Text>
-            <Text style={styles.label}>
-              <Text style={styles.bold}>Số điện thoại:</Text> {userInfo.phone_number || 'Chưa nhập'}
-            </Text>
-            <Text style={styles.label}>
-              <Text style={styles.bold}>Địa chỉ:</Text> {userInfo.address_line1 || 'Chưa nhập'}, {userInfo.address_line2 || 'Chưa nhập'}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              router.push({
-                pathname: '/EditProfile',
-                params: {
-                  first_name: userInfo.first_name,
-                  last_name: userInfo.last_name,
-                  phone: userInfo.phone_number,
-                  address_line1: userInfo.address_line1,
-                  address_line2: userInfo.address_line2,
-                  profile_picture_url: userInfo.img, 
-                },
-              })
-            }
-          >
-            <Text style={styles.buttonText}>Chỉnh sửa</Text>
-          </TouchableOpacity>
+      {/* Profile Card */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatarSection}>
+          <Image
+            source={userInfo.img && userInfo.img.startsWith('http') ? { uri: userInfo.img } : default_image}
+            style={styles.avatar}
+          />
         </View>
 
+        <View style={styles.infoSection}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>First Name</Text>
+            <Text style={styles.infoValue}>{userInfo.first_name || 'Not entered'}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Last Name</Text>
+            <Text style={styles.infoValue}>{userInfo.last_name || 'Not entered'}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Phone Number</Text>
+            <Text style={styles.infoValue}>{userInfo.phone_number || 'Not entered'}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Address</Text>
+            <Text style={styles.infoValue}>
+              {userInfo.address_line1 || 'Not entered'}{userInfo.address_line2 ? `, ${userInfo.address_line2}` : ''}
+            </Text>
+          </View>
+        </View>
 
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() =>
+            router.push({
+              pathname: '/EditProfile',
+              params: {
+                first_name: userInfo.first_name,
+                last_name: userInfo.last_name,
+                phone: userInfo.phone_number,
+                address_line1: userInfo.address_line1,
+                address_line2: userInfo.address_line2,
+                profile_picture_url: userInfo.img, 
+              },
+            })
+          }
+        >
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -114,76 +131,114 @@ export default Info;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
-    paddingHorizontal: 20,
+    backgroundColor: '#fafafa',
+  },
+  header: {
     backgroundColor: '#fff',
+    paddingTop: 50,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  backButton: {
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f8f9ff',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#e8eaff',
+  },
+  backButtonText: {
+    fontSize: 15,
+    color: '#6c63ff',
+    fontWeight: '600',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 8,
   },
-  noPlan: {
-    fontSize: 18,
-    color: '#777',
-    textAlign: 'center',
-    marginBottom: 20,
+  profileCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 24,
+    marginTop: 24,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
-  card: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    padding: 15,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: 'black',
-  },
-  bold: {
-    fontWeight: 'bold',
-  },
-  button: {
-    marginTop: 20,
-    backgroundColor: '#4a67ff',
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  buttonText: {
-    textAlign: 'center',
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  emptyState: {
+  avatarSection: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 100,
-  },
-  row: {
-  flexDirection: 'column',
-  alignItems: 'flex-start',
+    marginBottom: 24,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginRight: 15,
-    marginBottom: 10,
+    borderWidth: 3,
+    borderColor: '#e8eaff',
+    backgroundColor: '#f8f9ff',
   },
-  avatarRow: {
-  alignItems: 'center',
-  marginBottom: 20,
-},
-infoBlock: {
-  paddingHorizontal: 10,
-},
-avatar: {
-  width: 120,
-  height: 120,
-  borderRadius: 60,
-  borderWidth: 2,
-  borderColor: '#7B8CE4', // Optional: a nice color ring
-},
-
+  infoSection: {
+    marginBottom: 24,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  infoLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#4a5568',
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: 15,
+    color: '#2d3748',
+    flex: 2,
+    textAlign: 'right',
+  },
+  editButton: {
+    backgroundColor: '#6c63ff',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#6c63ff',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
 });

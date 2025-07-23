@@ -1,22 +1,22 @@
+import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Image,
-  Alert,
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 
 const hours = [
   '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00',
   '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00',
 ];
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const methods = ['Trực tiếp', 'Online'];
+const methods = ['In-person', 'Online'];
 
 const WorkInfo = () => {
   const [selectedSlots, setSelectedSlots] = useState({});
@@ -24,7 +24,7 @@ const WorkInfo = () => {
   const [introduction, setIntroduction] = useState('');
   const [specialized, setSpecialized] = useState('');
   const [price, setPrice] = useState('');
-  const [method, setMethod] = useState('Trực tiếp');
+  const [method, setMethod] = useState('In-person');
 
   const toggleSlot = (day, hour) => {
     const key = `${day}_${hour}`;
@@ -156,7 +156,7 @@ const WorkInfo = () => {
         </View>
 
         <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
-          <Text style={{ color: '#fff' }}>Lưu</Text>
+          <Text style={{ color: '#fff' }}>Save</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
